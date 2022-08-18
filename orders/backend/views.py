@@ -369,7 +369,7 @@ class AddressView(APIView):
     Класс для работы с адресами покупателей
     """
 
-    # получить мои контакты
+    # получить мои адреса
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'},
@@ -378,7 +378,7 @@ class AddressView(APIView):
         serializer = AddressSerializer(address, many=True)
         return Response(serializer.data)
 
-    # добавить новый контакт
+    # добавить новый адрес
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'},
@@ -400,34 +400,38 @@ class AddressView(APIView):
         else:
             return JsonResponse({'Status': False, 'Errors': serializer.errors})
 
-    # удалить контакт
+    # удалить адрес
     def delete(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'},
                                 status=403)
 
-        items_string = request.data.get('items')
-        if not items_string:
+        items_list = request.data.get('items')
+        if not items_list:
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Не указаны все необходимые аргументы'}
             )
 
-        items_list = items_string.split(',')
+        # items_list = items_string.split(',')
         query = Q()
-        objects_deleted = False
+        has_objects_to_delete = False
         for address_id in items_list:
-            if address_id.isdigit():
+            if type(address_id) == int:
                 query = query | Q(user_id=request.user.id, id=address_id)
-                objects_deleted = True
+                has_objects_to_delete = True
+            else:
+                return JsonResponse(
+                    {'Status': False,
+                     'Errors': 'Неправильный формат запроса'}
+                )
 
-        if objects_deleted:
-            deleted_count = Address.objects.filter(query).delete()[0]
+        if has_objects_to_delete:
+            deleted = Address.objects.filter(query).delete()
             return JsonResponse(
-                {'Status': True, 'Удалено объектов': deleted_count})
-        # TODO response 'не удалось удалить объекты'?
+                {'Status': True, 'Удалено объектов': deleted[0]})
 
-    # редактировать контакт
+    # редактировать адрес
     def put(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'},
@@ -439,21 +443,32 @@ class AddressView(APIView):
                  'Errors': 'Не указаны все необходимые аргументы'}
             )
 
-        if request.data['id'].isdigit():
-            address = Address.objects.filter(
-                id=request.data['id'], user_id=request.user.id
-            ).first()
-            if address:
-                serializer = AddressSerializer(address, data=request.data,
-                                               partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return JsonResponse({'Status': True})
-                else:
-                    return JsonResponse(
-                        {'Status': False, 'Errors': serializer.errors}
-                    )
-        # TODO response 'нет такого адреса'?
+        if type(request.data['id']) != int:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Неправильный формат запроса'}
+            )
+
+        address = Address.objects.filter(
+            id=request.data['id'], user_id=request.user.id
+        ).first()
+        if not address:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Нет адреса с таким id'}
+            )
+
+        request.data.update({'user': request.user.id})
+        serializer = AddressSerializer(
+            address, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse({'Status': True})
+        else:
+            return JsonResponse(
+                {'Status': False, 'Errors': serializer.errors}
+            )
 
 
 class CategoryView(ListAPIView):
@@ -584,17 +599,17 @@ class BasketView(APIView):
             user_id=request.user.id, state='basket'
         )
         query = Q()
-        have_objects_to_delete = False
+        has_objects_to_delete = False
         for order_item_id in items_list:
             if type(order_item_id) == int:
                 query = query | Q(order_id=basket.id, id=order_item_id)
-                have_objects_to_delete = True
+                has_objects_to_delete = True
             else:
                 return JsonResponse(
                     {'Status': False, 'Errors': 'Неверный формат запроса'}
                 )
 
-        if have_objects_to_delete:
+        if has_objects_to_delete:
             deleted_count = OrderItem.objects.filter(query).delete()[0]
             return JsonResponse(
                 {'Status': True, 'Удалено объектов': deleted_count})
@@ -692,4 +707,3 @@ class OrderView(APIView):
                     new_order.send(sender=self.__class__,
                                    user_id=request.user.id)
                     return JsonResponse({'Status': True})
-

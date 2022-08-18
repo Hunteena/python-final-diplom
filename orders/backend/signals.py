@@ -5,21 +5,14 @@ from django_rest_passwordreset.signals import reset_password_token_created
 
 from .models import ConfirmEmailToken, User
 
-# TODO migrate to Django 4.0?
-new_order = Signal(
-    providing_args=['user_id'],
-)
-
-new_user_registered = Signal(
-    providing_args=['user_id'],
-)
+new_order = Signal()
+new_user_registered = Signal()
 
 
-# TODO new_user_registered signal or post_save?
 @receiver(new_user_registered)
 def new_user_registered_signal(user_id, **kwargs):
     """
-    отправляем письмо с подтрердждением почты
+    отправляем письмо с подтверждением почты
     """
     # send an e-mail to the user
     token, _ = ConfirmEmailToken.objects.get_or_create(user_id=user_id)

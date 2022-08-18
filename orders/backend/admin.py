@@ -17,4 +17,3 @@ admin.site.register(Parameter)
 admin.site.register(ProductParameter)
 admin.site.register(Address)
 admin.site.register(ConfirmEmailToken)
-
