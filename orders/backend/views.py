@@ -21,7 +21,7 @@ from .models import (
 from .serializers import PartnerSerializer, UserSerializer, ShopSerializer, \
     OrderSerializer, CategorySerializer, \
     ProductInfoSerializer, OrderItemSerializer, AddressSerializer
-from .signals import new_order, new_user_registered
+from .signals import new_user_registered, order_state_changed
 
 
 class RegisterPartner(APIView):
@@ -34,17 +34,20 @@ class RegisterPartner(APIView):
 
         # проверяем обязательные аргументы
         if not {'email', 'password', 'company'}.issubset(request.data):
-            return JsonResponse({
-                'Status': False,
-                'Errors': 'Не указаны все необходимые аргументы'
-            })
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
+            )
 
         # проверяем пароль на сложность
         try:
             validate_password(request.data['password'])
         except Exception as password_error:
-            return JsonResponse({'Status': False,
-                                 'Errors': {'password': list(password_error)}})
+            return JsonResponse(
+                {'Status': False, 'Errors': {'password': list(password_error)}},
+                status=400
+            )
         else:
             # проверяем данные для уникальности имени пользователя
             partner_serializer = PartnerSerializer(data=request.data)
@@ -58,7 +61,9 @@ class RegisterPartner(APIView):
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
-                    {'Status': False, 'Errors': partner_serializer.errors})
+                    {'Status': False, 'Errors': partner_serializer.errors},
+                    status=400
+                )
 
 
 class PartnerUpdate(APIView):
@@ -85,7 +90,8 @@ class PartnerUpdate(APIView):
             try:
                 validate_url(url)
             except ValidationError as e:
-                return JsonResponse({'Status': False, 'Error': str(e)})
+                return JsonResponse({'Status': False, 'Error': str(e)},
+                                    status=400)
             else:
                 stream = rqs.get(url).content
 
@@ -130,7 +136,8 @@ class PartnerUpdate(APIView):
 
         return JsonResponse(
             {'Status': False,
-             'Errors': 'Не указаны все необходимые аргументы'}
+             'Errors': 'Не указаны все необходимые аргументы'},
+            status=400
         )
 
 
@@ -149,7 +156,8 @@ class RegisterAccount(APIView):
         if not required_fields.issubset(request.data):
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         # проверяем пароль на сложность
@@ -158,7 +166,8 @@ class RegisterAccount(APIView):
         except Exception as password_error:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': {'password': list(password_error)}}
+                 'Errors': {'password': list(password_error)}},
+                status=400
             )
         else:
             # проверяем данные для уникальности имени пользователя
@@ -173,7 +182,8 @@ class RegisterAccount(APIView):
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
-                    {'Status': False, 'Errors': user_serializer.errors}
+                    {'Status': False, 'Errors': user_serializer.errors},
+                    status=400
                 )
 
 
@@ -189,7 +199,8 @@ class ConfirmAccount(APIView):
         if not {'email', 'token'}.issubset(request.data):
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         token = ConfirmEmailToken.objects.filter(
@@ -204,7 +215,8 @@ class ConfirmAccount(APIView):
         else:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Неправильно указан токен или email'}
+                 'Errors': 'Неправильно указан токен или email'},
+                status=400
             )
 
 
@@ -219,7 +231,8 @@ class LoginAccount(APIView):
         if not {'email', 'password'}.issubset(request.data):
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         user = authenticate(request, username=request.data['email'],
@@ -232,7 +245,8 @@ class LoginAccount(APIView):
                 return JsonResponse({'Status': True, 'Token': token.key})
 
         return JsonResponse(
-            {'Status': False, 'Errors': 'Не удалось авторизовать'})
+            {'Status': False, 'Errors': 'Не удалось авторизовать'}, status=400
+        )
 
 
 class AccountDetails(APIView):
@@ -263,7 +277,8 @@ class AccountDetails(APIView):
             except Exception as password_error:
                 return JsonResponse(
                     {'Status': False,
-                     'Errors': {'password': list(password_error)}}
+                     'Errors': {'password': list(password_error)}},
+                    status=400
                 )
             else:
                 request.user.set_password(request.data['password'])
@@ -276,7 +291,8 @@ class AccountDetails(APIView):
             return JsonResponse({'Status': True})
         else:
             return JsonResponse(
-                {'Status': False, 'Errors': user_serializer.errors})
+                {'Status': False, 'Errors': user_serializer.errors}, status=400
+            )
 
 
 class PartnerState(APIView):
@@ -316,7 +332,8 @@ class PartnerState(APIView):
         if not state:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         try:
@@ -327,7 +344,9 @@ class PartnerState(APIView):
             )
             return JsonResponse({'Status': True})
         except ValueError as error:
-            return JsonResponse({'Status': False, 'Errors': str(error)})
+            return JsonResponse(
+                {'Status': False, 'Errors': str(error)}, status=400
+            )
 
 
 class PartnerOrders(APIView):
@@ -387,7 +406,8 @@ class AddressView(APIView):
         if not {'city', 'street'}.issubset(request.data):
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         # request.data._mutable = True
@@ -398,7 +418,8 @@ class AddressView(APIView):
             serializer.save()
             return JsonResponse({'Status': True})
         else:
-            return JsonResponse({'Status': False, 'Errors': serializer.errors})
+            return JsonResponse({'Status': False, 'Errors': serializer.errors},
+                                status=400)
 
     # удалить адрес
     def delete(self, request, *args, **kwargs):
@@ -410,26 +431,27 @@ class AddressView(APIView):
         if not items_list:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
-        # items_list = items_string.split(',')
         query = Q()
         has_objects_to_delete = False
         for address_id in items_list:
             if type(address_id) == int:
                 query = query | Q(user_id=request.user.id, id=address_id)
                 has_objects_to_delete = True
-            else:
-                return JsonResponse(
-                    {'Status': False,
-                     'Errors': 'Неправильный формат запроса'}
-                )
 
         if has_objects_to_delete:
             deleted = Address.objects.filter(query).delete()
             return JsonResponse(
                 {'Status': True, 'Удалено объектов': deleted[0]})
+        else:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Неправильный формат запроса'},
+                status=400
+            )
 
     # редактировать адрес
     def put(self, request, *args, **kwargs):
@@ -440,13 +462,15 @@ class AddressView(APIView):
         if 'id' not in request.data:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         if type(request.data['id']) != int:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Неправильный формат запроса'}
+                 'Errors': 'Неправильный формат запроса'},
+                status=400
             )
 
         address = Address.objects.filter(
@@ -455,7 +479,8 @@ class AddressView(APIView):
         if not address:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Нет адреса с таким id'}
+                 'Errors': 'Нет адреса с таким id'},
+                status=400
             )
 
         request.data.update({'user': request.user.id})
@@ -467,7 +492,7 @@ class AddressView(APIView):
             return JsonResponse({'Status': True})
         else:
             return JsonResponse(
-                {'Status': False, 'Errors': serializer.errors}
+                {'Status': False, 'Errors': serializer.errors}, status=400
             )
 
 
@@ -554,7 +579,8 @@ class BasketView(APIView):
         if not items_list:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         basket, _ = Order.objects.get_or_create(
@@ -569,13 +595,13 @@ class BasketView(APIView):
                     serializer.save()
                 except IntegrityError as error:
                     return JsonResponse(
-                        {'Status': False, 'Errors': str(error)}
+                        {'Status': False, 'Errors': str(error)}, status=400
                     )
                 else:
                     objects_created += 1
             else:
                 return JsonResponse(
-                    {'Status': False, 'Errors': serializer.errors}
+                    {'Status': False, 'Errors': serializer.errors}, status=400
                 )
 
         return JsonResponse(
@@ -592,7 +618,8 @@ class BasketView(APIView):
         if not items_list:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         basket, _ = Order.objects.get_or_create(
@@ -604,15 +631,16 @@ class BasketView(APIView):
             if type(order_item_id) == int:
                 query = query | Q(order_id=basket.id, id=order_item_id)
                 has_objects_to_delete = True
-            else:
-                return JsonResponse(
-                    {'Status': False, 'Errors': 'Неверный формат запроса'}
-                )
 
         if has_objects_to_delete:
             deleted_count = OrderItem.objects.filter(query).delete()[0]
             return JsonResponse(
                 {'Status': True, 'Удалено объектов': deleted_count})
+        else:
+            return JsonResponse(
+                {'Status': False, 'Errors': 'Неверный формат запроса'},
+                status=400
+            )
 
     # изменить количество позиции в корзине
     def put(self, request, *args, **kwargs):
@@ -625,7 +653,8 @@ class BasketView(APIView):
         if not items_list:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
             )
 
         basket, _ = Order.objects.get_or_create(
@@ -682,28 +711,41 @@ class OrderView(APIView):
                 {'Status': False, 'Error': 'Log in required'}, status=403
             )
 
-        if not {'id', 'address'}.issubset(request.data):
+        address_id = request.data.get('address_id')
+        if not address_id:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'}
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
+            )
+        if type(address_id) != int:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Неправильно указаны аргументы'},
+                status=400
             )
 
-        if type(request.data['id']) == int:
-            try:
-                is_updated = Order.objects.filter(
-                    user_id=request.user.id, id=request.data['id']
-                ).update(
-                    address_id=request.data['address'],
-                    state='new'
-                )
-            except IntegrityError as error:
-                print(error)
-                return JsonResponse(
-                    {'Status': False,
-                     'Errors': 'Неправильно указаны аргументы'}
-                )
-            else:
-                if is_updated:
-                    new_order.send(sender=self.__class__,
-                                   user_id=request.user.id)
-                    return JsonResponse({'Status': True})
+        try:
+            basket = Order.objects.get(user_id=request.user.id, state='basket')
+        except Order.DoesNotExist:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Нет заказа со статусом корзины'},
+                status=400
+            )
+
+        try:
+            basket.address_id = address_id
+            basket.state = 'new'
+            basket.save()
+        except IntegrityError:
+            # print(error)
+            return JsonResponse(
+                {'Status': False, 'Errors': 'Адрес не найден'}, status=400
+            )
+        else:
+            order_state_changed.send(sender=self.__class__,
+                                     user_id=request.user.id,
+                                     order_id=basket.id,
+                                     state='new')
+            return JsonResponse({'Status': True})

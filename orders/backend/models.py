@@ -177,6 +177,9 @@ class ProductInfo(models.Model):
                                     name='unique_product_info'),
         ]
 
+    def __str__(self):
+        return f"{self.product}"
+
 
 class Parameter(models.Model):
     name = models.CharField(max_length=40, verbose_name='Название')
@@ -238,11 +241,11 @@ class Address(models.Model):
 
 class Order(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             verbose_name='Пользователь',
+                             verbose_name='Покупатель',
                              related_name='orders',
                              blank=True,
                              on_delete=models.CASCADE)
-    dt = models.DateTimeField(auto_now_add=True)
+    dt = models.DateTimeField(verbose_name='Дата создания', auto_now_add=True)
     state = models.CharField(verbose_name='Статус',
                              choices=STATE_CHOICES,
                              max_length=15)
@@ -257,7 +260,7 @@ class Order(models.Model):
         ordering = ('-dt',)
 
     def __str__(self):
-        return str(self.dt)
+        return f"Заказ {self.id} от {self.dt}"
 
 
 class OrderItem(models.Model):
@@ -280,6 +283,9 @@ class OrderItem(models.Model):
             models.UniqueConstraint(fields=['order_id', 'product_info'],
                                     name='unique_order_item'),
         ]
+
+    def __str__(self):
+        return f"{self.product_info}"
 
 
 class ConfirmEmailToken(models.Model):

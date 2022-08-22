@@ -4,10 +4,26 @@ from django.contrib import admin
 # from .models import User
 from .models import (
     Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
-    User, ConfirmEmailToken, Address
+    User, ConfirmEmailToken, Address, Order, OrderItem
 )
 
+
+class OrderItemInline(admin.StackedInline):
+    model = OrderItem
+    extra = 0
+    fields = [('product_info', 'quantity')]
+
+
 # Register your models here.
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    fields = ['state', 'user', 'address']
+    readonly_fields = ['user', 'address']
+    list_display = ['id', 'user', 'state', 'dt']
+    list_filter = ['user', 'state', 'dt']
+    inlines = [OrderItemInline, ]
+
+
 admin.site.register(User)
 admin.site.register(Shop)
 admin.site.register(Category)
