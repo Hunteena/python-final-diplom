@@ -4,7 +4,7 @@ from django.contrib import admin
 # from .models import User
 from .models import (
     Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
-    User, ConfirmEmailToken, Address, Order, OrderItem
+    User, ConfirmEmailToken, Address, Order, OrderItem, Delivery
 )
 
 
@@ -24,12 +24,14 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline, ]
 
 
-admin.site.register(User)
-admin.site.register(Shop)
-admin.site.register(Category)
-admin.site.register(ProductInfo)
-admin.site.register(Product)
-admin.site.register(Parameter)
-admin.site.register(ProductParameter)
-admin.site.register(Address)
-admin.site.register(ConfirmEmailToken)
+admin.site.register(Delivery)
+
+# admin.site.register(User)
+# admin.site.register(Shop)
+# admin.site.register(Category)
+# admin.site.register(ProductInfo)
+# admin.site.register(Product)
+# admin.site.register(Parameter)
+# admin.site.register(ProductParameter)
+# admin.site.register(Address)
+# admin.site.register(ConfirmEmailToken)

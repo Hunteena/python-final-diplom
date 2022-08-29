@@ -21,6 +21,7 @@ USER_TYPE_CHOICES = (
     ('buyer', 'Покупатель'),
 )
 
+
 # Create your models here.
 
 
@@ -252,6 +253,7 @@ class Order(models.Model):
     address = models.ForeignKey(Address, verbose_name='Адрес',
                                 blank=True, null=True,
                                 on_delete=models.CASCADE)
+
     # buyer = models.OneToOneField
 
     class Meta:
@@ -286,6 +288,32 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product_info}"
+
+
+class Delivery(models.Model):
+    shop = models.ForeignKey(
+        Shop,
+        verbose_name='Магазин',
+        related_name='delivery',
+        on_delete=models.CASCADE,
+    )
+    min_sum = models.IntegerField(
+        verbose_name='Минимальная сумма',
+        unique=True,
+        default=0
+    )
+    cost = models.IntegerField(
+        verbose_name='Стоимомть доставки'
+    )
+
+    class Meta:
+        verbose_name = 'Стоимость доставки'
+        verbose_name_plural = "Список стоимости доставки"
+        ordering = ('shop', 'min_sum')
+
+    def __str__(self):
+        return (f"{self.shop}: при заказе от {self.min_sum} "
+                f"стоимость доставки {self.cost}")
 
 
 class ConfirmEmailToken(models.Model):
