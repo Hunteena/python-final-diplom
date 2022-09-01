@@ -169,16 +169,22 @@ class OrderSerializer(serializers.ModelSerializer):
         ret['shops'] = []
         for shop in shops:
             shop_data = ShopOrderSerializer(shop, order_id=instance.id).data
-            shop_delivery = Delivery.objects.filter(
-                shop=shop, min_sum__lte=shop_data['shop_sum']
-            ).order_by('-min_sum').first()
-            if shop_delivery is None:
-                shop_data['delivery'] = (f"{shop_data['name']}: "
-                                         f"сумма заказа меньше минимальной")
-                invalid_deliveries.append(shop_data['delivery'])
+            shop_deliveries = Delivery.objects.filter(shop=shop)
+            if shop_deliveries:
+                shop_delivery = shop_deliveries.filter(
+                    min_sum__lte=shop_data['shop_sum']
+                ).order_by('-min_sum').first()
+                if shop_delivery is None:
+                    shop_data['delivery'] = (f"{shop_data['name']}: "
+                                             f"сумма заказа меньше минимальной.")
+                    invalid_deliveries.append(shop_data['delivery'])
+                else:
+                    shop_data['delivery'] = shop_delivery.cost
+                    delivery_costs.append(shop_data['delivery'])
             else:
-                shop_data['delivery'] = shop_delivery.cost
-                delivery_costs.append(shop_data['delivery'])
+                shop_data['delivery'] = (f"{shop_data['name']}: "
+                                         f"стоимость доставки недоступна.")
+                invalid_deliveries.append(shop_data['delivery'])
             ret['shops'].append(shop_data)
 
         if invalid_deliveries:
@@ -229,5 +235,14 @@ class PartnerOrderSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ('id', 'name',)
-        read_only_fields = ('id',)
+        fields = ['id', 'name', ]
+        read_only_fields = ['id']
+
+
+class DeliverySerializer(serializers.ModelSerializer):
+    shop = ShopSerializer(read_only=True)
+
+    class Meta:
+        model = Delivery
+        fields = ['id', 'shop', 'min_sum', 'cost']
+        read_only_fields = ['id']

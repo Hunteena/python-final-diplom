@@ -8,30 +8,89 @@ from .models import (
 )
 
 
+# Register your models here.
+class ProductParameterInline(admin.TabularInline):
+    model = ProductParameter
+    extra = 0
+    fields = ('parameter', 'value')
+    readonly_fields = ('parameter', 'value')
+    can_delete = False
+
+
+@admin.register(ProductInfo)
+class ProductInfoAdmin(admin.ModelAdmin):
+    model = ProductInfo
+    # extra = 0
+    fields = (('id', 'external_id'), 'model', 'product', 'shop', 'quantity',
+              ('price', 'price_rrc'))
+    readonly_fields = ('id', 'model', 'external_id', 'product', 'shop',
+                       'quantity', 'price', 'price_rrc')
+    list_display = ('product', 'shop', 'quantity', 'price')
+    list_filter = ('shop', )
+    inlines = [ProductParameterInline, ]
+
+
 class OrderItemInline(admin.StackedInline):
     model = OrderItem
     extra = 0
-    fields = [('product_info', 'quantity')]
+    fields = (('product_info', 'quantity'),)
+    readonly_fields = ('product_info', 'quantity')
 
 
-# Register your models here.
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    fields = ['state', 'user', 'address']
-    readonly_fields = ['user', 'address']
-    list_display = ['id', 'user', 'state', 'dt']
-    list_filter = ['user', 'state', 'dt']
+    fields = ('id', 'state', ('user', 'address'))
+    readonly_fields = ('id', 'user', 'address')
+    list_display = ('id', 'user', 'state', 'dt')
+    list_filter = ('user', 'state', 'dt')
     inlines = [OrderItemInline, ]
 
 
-admin.site.register(Delivery)
+class AddressInline(admin.StackedInline):
+    model = Address
+    fields = (('city', 'street'),
+              ('house', 'structure'),
+              ('building', 'apartment'))
+    extra = 0
 
-# admin.site.register(User)
+
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    fields = (('type', 'is_active'), ('company', 'position'),
+              ('first_name', 'patronymic', 'last_name'),
+              ('email', 'phone'),
+              ('date_joined', 'last_login'), 'is_superuser')
+    list_display = ('__str__', 'type', 'is_active')
+    list_filter = ('type', 'company')
+    inlines = [AddressInline, ]
+
+
+@admin.register(Delivery)
+class DeliveryAdmin(admin.ModelAdmin):
+    list_display = ('__str__',)
+    list_filter = ('shop',)
+
+
+@admin.register(Shop)
+class ShopAdmin(admin.ModelAdmin):
+    list_display = ('name', 'user', 'state')
+
+
+# class ProductInline(admin.StackedInline):
+#     model = Product
+#     fields = ('id', 'name')
+#     extra = 0
+#     can_delete = False
+#
+#
+# @admin.register(Category)
+# class CategoryAdmin(admin.ModelAdmin):
+#     inlines = [ProductInline, ]
+
 # admin.site.register(Shop)
-# admin.site.register(Category)
-# admin.site.register(ProductInfo)
+admin.site.register(Category)
 # admin.site.register(Product)
 # admin.site.register(Parameter)
 # admin.site.register(ProductParameter)
 # admin.site.register(Address)
-# admin.site.register(ConfirmEmailToken)
+admin.site.register(ConfirmEmailToken)

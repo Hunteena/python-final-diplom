@@ -76,6 +76,7 @@ class BasketView(APIView):
         basket = Order.objects.filter(
             user_id=request.user.id, state='basket'
         ).prefetch_related(
+            'ordered_items__product_info__shop',
             'ordered_items__product_info__product__category',
             'ordered_items__product_info__product_parameters__parameter'
         ).annotate(
@@ -196,7 +197,7 @@ class BasketView(APIView):
 
 class OrderView(APIView):
     """
-    Класс для получения и размешения заказов пользователями
+    Класс для получения и размещения заказов пользователями
     """
 
     # получить мои заказы
@@ -252,12 +253,18 @@ class OrderView(APIView):
         ).distinct()
         for shop in shops:
             shop_data = ShopOrderSerializer(shop, order_id=basket.id).data
-            shop_delivery = Delivery.objects.filter(
-                shop=shop, min_sum__lte=shop_data['shop_sum']
-            ).order_by('-min_sum').first()
-            if shop_delivery is None:
+            shop_deliveries = Delivery.objects.filter(shop=shop)
+            if not shop_deliveries:
                 invalid_deliveries.append(f"{shop_data['name']}: "
-                                          f"сумма заказа меньше минимальной")
+                                          f"стоимость доставки недоступна.")
+            else:
+                shop_delivery = shop_deliveries.filter(
+                    min_sum__lte=shop_data['shop_sum']
+                ).order_by('-min_sum').first()
+                if shop_delivery is None:
+                    invalid_deliveries.append(
+                        f"{shop_data['name']}: сумма заказа меньше минимальной"
+                    )
         if invalid_deliveries:
             return JsonResponse(
                 {'Status': False, 'Errors': invalid_deliveries}, status=400

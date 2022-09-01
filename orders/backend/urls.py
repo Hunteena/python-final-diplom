@@ -4,7 +4,8 @@ from django_rest_passwordreset.views import reset_password_request_token, \
 
 from .views import PartnerUpdate, RegisterPartner, RegisterAccount, \
     ConfirmAccount, LoginAccount, PartnerState, PartnerOrders, AccountDetails, \
-    AddressView, CategoryView, ShopView, ProductInfoView, BasketView, OrderView
+    AddressView, CategoryView, ShopView, ProductInfoView, BasketView, \
+    OrderView, DeliveryView
 
 urlpatterns = [
     path('partner/register/', RegisterPartner.as_view(), name='partner-register'),
@@ -25,4 +26,5 @@ urlpatterns = [
     path('products/', ProductInfoView.as_view(), name='products'),
     path('basket/', BasketView.as_view(), name='basket'),
     path('order/', OrderView.as_view(), name='order'),
+    path('delivery/', DeliveryView.as_view(), name='delivery'),
 ]

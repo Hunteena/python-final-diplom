@@ -12,10 +12,10 @@ from rest_framework.views import APIView
 
 from ..models import (
     Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
-    Order
+    Order, Delivery
 )
 from ..serializers import PartnerSerializer, ShopSerializer, \
-    OrderSerializer, PartnerOrderSerializer
+    OrderSerializer, PartnerOrderSerializer, DeliverySerializer
 from ..signals import new_user_registered
 
 
@@ -211,6 +211,7 @@ class PartnerOrders(APIView):
         ).exclude(
             state='basket'
         ).prefetch_related(
+            'ordered_items__product_info__shop',
             'ordered_items__product_info__product__category',
             'ordered_items__product_info__product_parameters__parameter'
         ).select_related(
@@ -223,3 +224,36 @@ class PartnerOrders(APIView):
         serializer = PartnerOrderSerializer(order, partner_id=request.user.id,
                                             many=True)
         return Response(serializer.data)
+
+
+class DeliveryView(APIView):
+    """
+    Класс для стоимости доставки
+    """
+
+    def get(self, request, *args, **kwargs):
+        shop = request.GET.get('shop')
+        if shop:
+            delivery = Delivery.objects.filter(shop=shop).order_by('-min_sum')
+        else:
+            delivery = Delivery.objects.order_by('shop', '-min_sum')
+        serializer = DeliverySerializer(delivery, many=True)
+        return Response(serializer.data)
+
+    # def post(self, request, *args, **kwargs):
+    #     if not request.user.is_authenticated:
+    #         return JsonResponse(
+    #             {'Status': False, 'Error': 'Log in required'}, status=403
+    #         )
+    #
+    #     if request.user.type != 'shop':
+    #         return JsonResponse(
+    #             {'Status': False, 'Error': 'Только для магазинов'}, status=403
+    #         )
+    #
+    #     if not {'min_sum', 'street'}.issubset(request.data):
+    #         return JsonResponse(
+    #             {'Status': False,
+    #              'Errors': 'Не указаны все необходимые аргументы'},
+    #             status=400
+    #         )

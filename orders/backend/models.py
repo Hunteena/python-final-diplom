@@ -172,7 +172,7 @@ class ProductInfo(models.Model):
 
     class Meta:
         verbose_name = 'Информация о продукте'
-        verbose_name_plural = "Информационный список о продуктах"
+        verbose_name_plural = "Список информации о продуктах"
         constraints = [
             models.UniqueConstraint(fields=['product', 'shop', 'external_id'],
                                     name='unique_product_info'),
@@ -215,6 +215,9 @@ class ProductParameter(models.Model):
                                     name='unique_product_parameter'),
         ]
 
+    def __str__(self):
+        return f"{self.product_info}: {self.parameter}"
+
 
 class Address(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -234,10 +237,16 @@ class Address(models.Model):
 
     class Meta:
         verbose_name = 'Адрес пользователя'
-        verbose_name_plural = "Список адресов пользователя"
+        verbose_name_plural = "Список адресов пользователей"
 
     def __str__(self):
-        return f'{self.city} {self.street} {self.house}'
+        address_translation = {'street': 'улица', 'house': 'дом',
+                               'structure': 'корпус', 'building': 'строение',
+                               'apartment': 'квартира'}
+        not_empty_parts = [f"{rus} {getattr(self, eng)}"
+                           for eng, rus in address_translation.items()
+                           if getattr(self, eng)]
+        return f"{self.city}, " + ', '.join(not_empty_parts)
 
 
 class Order(models.Model):
@@ -310,6 +319,10 @@ class Delivery(models.Model):
         verbose_name = 'Стоимость доставки'
         verbose_name_plural = "Список стоимости доставки"
         ordering = ('shop', 'min_sum')
+        constraints = [
+            models.UniqueConstraint(fields=['shop', 'min_sum'],
+                                    name='unique_shop_min_sum'),
+        ]
 
     def __str__(self):
         return (f"{self.shop}: при заказе от {self.min_sum} "
