@@ -6,6 +6,7 @@ from .models import (
     Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
     User, ConfirmEmailToken, Address, Order, OrderItem, Delivery
 )
+from .signals import order_state_changed
 
 
 # Register your models here.
@@ -45,6 +46,13 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('user', 'state', 'dt')
     inlines = [OrderItemInline, ]
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        order_state_changed.send(sender=obj.__class__,
+                                 user_id=obj.user.id,
+                                 order_id=obj.id,
+                                 state=obj.state)
+
 
 class AddressInline(admin.StackedInline):
     model = Address
@@ -65,15 +73,15 @@ class UserAdmin(admin.ModelAdmin):
     inlines = [AddressInline, ]
 
 
-@admin.register(Delivery)
-class DeliveryAdmin(admin.ModelAdmin):
-    list_display = ('__str__',)
-    list_filter = ('shop',)
+class DeliveryInline(admin.TabularInline):
+    model = Delivery
+    extra = 0
 
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
     list_display = ('name', 'user', 'state')
+    inlines = [DeliveryInline, ]
 
 
 # class ProductInline(admin.StackedInline):

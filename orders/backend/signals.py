@@ -4,7 +4,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.dispatch import receiver, Signal
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from .models import ConfirmEmailToken, User, Order
+from .models import ConfirmEmailToken, User, Order, STATE_CHOICES
 
 new_user_registered = Signal()
 order_state_changed = Signal()
@@ -65,12 +65,17 @@ def order_state_changed_signal(user_id, order_id, state, **kwargs):
     """
     # send an e-mail to the user
     user = User.objects.get(id=user_id)
+    rus_state = ''
+    for state_tuple in STATE_CHOICES:
+        if state_tuple[0] == state:
+            rus_state = state_tuple[1]
+            break
 
     msg = EmailMultiAlternatives(
         # title:
         f"Обновление статуса заказа",
         # message:
-        f'Заказ {order_id} получил статус {state}',
+        f'Заказ {order_id} получил статус {rus_state}.',
         # from:
         settings.EMAIL_HOST_USER,
         # to:
@@ -78,6 +83,18 @@ def order_state_changed_signal(user_id, order_id, state, **kwargs):
     )
     msg.send()
 
+    if state == 'new':
+        msg = EmailMultiAlternatives(
+            # title:
+            f"Новый заказ от {user}",
+            # message:
+            f'Пользователем {user} оформлен новый заказ {order_id}.',
+            # from:
+            settings.EMAIL_HOST_USER,
+            # to:
+            ['admin_email@example.com']  # TODO where to store admin's email?
+        )
+        msg.send()
 
 # @receiver(post_save, sender=Order)
 # def order_change

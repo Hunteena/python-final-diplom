@@ -312,7 +312,7 @@ class Delivery(models.Model):
         default=0
     )
     cost = models.IntegerField(
-        verbose_name='Стоимомть доставки'
+        verbose_name='Стоимоcть доставки'
     )
 
     class Meta:
