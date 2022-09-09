@@ -52,11 +52,33 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
-class ShopSerializer(serializers.ModelSerializer):
+class DeliverySerializer(serializers.ModelSerializer):
+    # shop = ShopSerializer(read_only=True)
+
+    class Meta:
+        model = Delivery
+        fields = ['min_sum', 'cost']
+        # read_only_fields = ['id']
+
+
+class ShopStateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
-        fields = ['id', 'name', 'state', ]
+        fields = ['id', 'name', 'state']
+
+
+class ShopSerializer(serializers.ModelSerializer):
+    delivery = DeliverySerializer(read_only=True, many=True)
+
+    class Meta:
+        model = Shop
+        fields = ['id', 'name', 'state', 'delivery', 'file', 'url',
+                  'update_dt', 'is_uptodate']
         read_only_fields = ['id']
+        # extra_kwargs = {
+        #     'update_dt': {'write_only': True},
+        #     'is_uptodate': {'write_only': True},
+        # }
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -236,13 +258,4 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name', ]
-        read_only_fields = ['id']
-
-
-class DeliverySerializer(serializers.ModelSerializer):
-    shop = ShopSerializer(read_only=True)
-
-    class Meta:
-        model = Delivery
-        fields = ['id', 'shop', 'min_sum', 'cost']
         read_only_fields = ['id']

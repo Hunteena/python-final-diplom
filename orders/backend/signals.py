@@ -8,6 +8,7 @@ from .models import ConfirmEmailToken, User, Order, STATE_CHOICES
 
 new_user_registered = Signal()
 order_state_changed = Signal()
+price_list_updated = Signal()
 
 
 @receiver(new_user_registered)
@@ -96,5 +97,19 @@ def order_state_changed_signal(user_id, order_id, state, **kwargs):
         )
         msg.send()
 
-# @receiver(post_save, sender=Order)
-# def order_change
+
+@receiver(price_list_updated)
+def price_list_updated_signal(user, shop_name, **kwargs):
+    # send an e-mail to the user
+
+    msg = EmailMultiAlternatives(
+        # title:
+        f"{shop_name}: обновление прайса",
+        # message:
+        f"Пользователь {user} сообщил о новом прайс-листе магазина {shop_name}",
+        # from:
+        settings.EMAIL_HOST_USER,
+        # to:
+        [user.email]
+    )
+    msg.send()

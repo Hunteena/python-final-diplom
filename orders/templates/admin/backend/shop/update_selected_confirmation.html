@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {{ media }}
+    <script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; Актуализировать несколько прайс-листов
+</div>
+{% endblock %}
+
+{% block content %}
+    <p>Прайс-листы, полученные от партнёров, будут внесены в общую базу данных. Процесс может занять длительное время.</p>
+    <h2>Магазины</h2>
+    {% for shop in selected %}
+        <ul>{{ shop }}</ul>
+    {% endfor %}
+    <form method="post">{% csrf_token %}
+    <div>
+    <a href="{{ update_href }}" class="button">Понятно</a>
+    <a href="#" class="button cancel-link">{% translate "No, take me back" %}</a>
+    </div>
+    </form>
+{% endblock %}

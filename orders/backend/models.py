@@ -98,9 +98,24 @@ class User(AbstractUser):
         ordering = ('company',)
 
 
+def shop_directory_path(instance, filename):
+    return f'price_lists/shop_{instance.id}/{filename}'
+
+
 class Shop(models.Model):
     name = models.CharField(max_length=50, verbose_name='Название')
     url = models.URLField(verbose_name='Ссылка', null=True, blank=True)
+    file = models.FileField(upload_to=shop_directory_path,
+                            verbose_name='Файл',
+                            null=True,
+                            blank=True)
+    update_dt = models.DateField(
+        verbose_name='Дата сообщения об обновлении прайс-листа',
+        null=True,
+        blank=True
+    )
+    is_uptodate = models.BooleanField(verbose_name='Актуальность прайс-листа',
+                                      default=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
                                 verbose_name='Пользователь',
                                 blank=True,
@@ -300,20 +315,16 @@ class OrderItem(models.Model):
 
 
 class Delivery(models.Model):
-    shop = models.ForeignKey(
-        Shop,
-        verbose_name='Магазин',
-        related_name='delivery',
-        on_delete=models.CASCADE,
+    shop = models.ForeignKey(Shop,
+                             verbose_name='Магазин',
+                             related_name='delivery',
+                             on_delete=models.CASCADE,
     )
-    min_sum = models.IntegerField(
-        verbose_name='Минимальная сумма',
-        unique=True,
-        default=0
+    min_sum = models.IntegerField(verbose_name='Минимальная сумма',
+                                  unique=True,
+                                  default=0
     )
-    cost = models.IntegerField(
-        verbose_name='Стоимоcть доставки'
-    )
+    cost = models.IntegerField(verbose_name='Стоимоcть доставки')
 
     class Meta:
         verbose_name = 'Стоимость доставки'

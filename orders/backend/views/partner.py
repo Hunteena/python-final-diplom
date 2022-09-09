@@ -1,3 +1,4 @@
+import datetime
 from distutils.util import strtobool
 
 import requests as rqs
@@ -16,7 +17,7 @@ from ..models import (
 )
 from ..serializers import PartnerSerializer, ShopSerializer, \
     OrderSerializer, PartnerOrderSerializer, DeliverySerializer
-from ..signals import new_user_registered
+from ..signals import new_user_registered, price_list_updated
 
 
 class RegisterPartner(APIView):
@@ -40,7 +41,8 @@ class RegisterPartner(APIView):
             validate_password(request.data['password'])
         except Exception as password_error:
             return JsonResponse(
-                {'Status': False, 'Errors': {'password': list(password_error)}},
+                {'Status': False,
+                 'Errors': {'password': list(password_error)}},
                 status=400
             )
         else:
@@ -63,7 +65,7 @@ class RegisterPartner(APIView):
 
 class PartnerUpdate(APIView):
     """
-    Класс для обновления прайса от поставщика
+    Класс для получения информации для обновления прайс-листа
     """
 
     def post(self, request, *args, **kwargs):
@@ -79,61 +81,113 @@ class PartnerUpdate(APIView):
                 status=403
             )
 
+        data = {'file': None, 'url': None,
+                'update_dt': datetime.date.today(), 'is_uptodate': False}
+        file = request.FILES.get('file')
         url = request.data.get('url')
-        if url:
+        if file:
+            data['file'] = file
+        elif url:
             validate_url = URLValidator()
             try:
                 validate_url(url)
             except ValidationError as e:
                 return JsonResponse({'Status': False, 'Error': str(e)},
                                     status=400)
-            else:
-                stream = rqs.get(url).content
+            data['url'] = url
+        else:
+            return JsonResponse({'Status': False,
+                                 'Error': 'Необходим либо файл, либо ссылка.'})
 
-                data = yaml.safe_load(stream)
+        shop, _ = Shop.objects.get_or_create(user_id=request.user.id)
+        data['name'] = f"- Актуализируйте прайс-лист -"
+        shop_serializer = ShopSerializer(shop, data=data,
+                                         partial=True)
+        if shop_serializer.is_valid():
+            shop_serializer.save()
+            price_list_updated.send(sender=self.__class__,
+                                    user=request.user,
+                                    shop_name=shop_serializer.data['name'])
 
-                shop, _ = Shop.objects.get_or_create(
-                    name=data['shop'], user_id=request.user.id
-                )
-                # TODO clear shop categories?
-                for category in data['categories']:
-                    category_object, _ = Category.objects.get_or_create(
-                        id=category['id'], name=category['name']
-                    )
-                    category_object.shops.add(shop.id)
-                    category_object.save()
-                ProductInfo.objects.filter(shop_id=shop.id).delete()
-                for item in data['goods']:
-                    product, _ = Product.objects.get_or_create(
-                        name=item['name'], category_id=item['category']
-                    )
+            return JsonResponse({'Status': True})
+        else:
+            return JsonResponse(
+                {'Status': False, 'Errors': shop_serializer.errors},
+                status=400
+            )
 
-                    product_info = ProductInfo.objects.create(
-                        product_id=product.id,
-                        external_id=item['id'],
-                        model=item['model'],
-                        price=item['price'],
-                        price_rrc=item['price_rrc'],
-                        quantity=item['quantity'],
-                        shop_id=shop.id
-                    )
-                    for name, value in item['parameters'].items():
-                        parameter_object, _ = Parameter.objects.get_or_create(
-                            name=name
-                        )
-                        ProductParameter.objects.create(
-                            product_info_id=product_info.id,
-                            parameter_id=parameter_object.id,
-                            value=value
-                        )
 
-                return JsonResponse({'Status': True})
+class UpdatePrices(APIView):
+    """
+    Класс для обновления прайса от поставщика
+    """
 
-        return JsonResponse(
-            {'Status': False,
-             'Errors': 'Не указаны все необходимые аргументы'},
-            status=400
+    def post(self, request, *args, **kwargs):
+        # if not request.user.is_authenticated:
+        #     return JsonResponse(
+        #         {'Status': False, 'Error': 'Log in required'},
+        #         status=403
+        #     )
+        #
+        # if request.user.type != 'shop':
+        #     return JsonResponse(
+        #         {'Status': False, 'Error': 'Только для магазинов'},
+        #         status=403
+        #     )
+
+        user_id = request.data.get('user_id')
+
+        file = request.data.get('file')
+        url = request.data.get('url')
+        if file:
+            stream = ...
+        elif url:
+            stream = rqs.get(url).content
+        else:
+            return JsonResponse(
+                {'Status': False,
+                 'Errors': 'Не указаны все необходимые аргументы'},
+                status=400
+            )
+
+        data = yaml.safe_load(stream)
+
+        shop, _ = Shop.objects.get_or_create(
+            name=data['shop'], user_id=user_id
         )
+        # TODO clear shop categories?
+        for category in data['categories']:
+            category_object, _ = Category.objects.get_or_create(
+                id=category['id'], name=category['name']
+            )
+            category_object.shops.add(shop.id)
+            category_object.save()
+        ProductInfo.objects.filter(shop_id=shop.id).delete()
+        for item in data['goods']:
+            product, _ = Product.objects.get_or_create(
+                name=item['name'], category_id=item['category']
+            )
+
+            product_info = ProductInfo.objects.create(
+                product_id=product.id,
+                external_id=item['id'],
+                model=item['model'],
+                price=item['price'],
+                price_rrc=item['price_rrc'],
+                quantity=item['quantity'],
+                shop_id=shop.id
+            )
+            for name, value in item['parameters'].items():
+                parameter_object, _ = Parameter.objects.get_or_create(
+                    name=name
+                )
+                ProductParameter.objects.create(
+                    product_info_id=product_info.id,
+                    parameter_id=parameter_object.id,
+                    value=value
+                )
+
+        return JsonResponse({'Status': True})
 
 
 class PartnerState(APIView):
@@ -155,7 +209,7 @@ class PartnerState(APIView):
 
         shop = request.user.shop
         serializer = ShopSerializer(shop)
-        return Response(serializer.data)
+        return Response(serializer.data['state'])
 
     # изменить текущий статус
     def post(self, request, *args, **kwargs):

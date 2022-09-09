@@ -1,0 +1,35 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    {{ media }}
+    <script src="{% static 'admin/js/cancel.js' %}" async></script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; Результат операции
+</div>
+{% endblock %}
+
+{% block content %}
+<p>{% if updated %} Успешно обновлены прайс-листы магазинов: {% endif %}
+{% for shop in updated %}
+    <ul>{{ shop }}</ul>
+{% endfor %}
+</p>
+<p>{% if already_updated %} Не были обновлены, так как уже актуальны: {% endif %}
+{% for shop in already_updated %}
+    <ul>{{ shop }}</ul>
+{% endfor %}
+</p>
+<p>{% if not_updated %} Не удалось обновить: {% endif %}
+{% for shop, error in not_updated.items %}
+    <ul>{{ shop }}: error</ul>
+{% endfor %}
+</p>
+{% endblock %}
