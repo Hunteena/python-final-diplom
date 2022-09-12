@@ -1,21 +1,19 @@
+import requests as rqs
 import yaml
 from django.contrib import admin
 # from django.contrib.auth.models import Group
 # from django.contrib.auth.admin import UserAdmin
 # from .models import User
 from django.contrib.admin import helpers
-from django.http import JsonResponse
 from django.template.response import TemplateResponse
 from django.urls import path
-
-import requests as rqs
 
 from .models import (
     Shop, Category, ProductInfo, ProductParameter,
     User, ConfirmEmailToken, Address, Order, OrderItem, Delivery, Product,
-    Parameter
+    Parameter, STATE_CHOICES
 )
-from .signals import order_state_changed
+from .tasks import send_email_task
 
 
 # Register your models here.
@@ -57,10 +55,18 @@ class OrderAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        order_state_changed.send(sender=obj.__class__,
-                                 user_id=obj.user.id,
-                                 order_id=obj.id,
-                                 state=obj.state)
+
+        # отправляем письмо пользователю при изменении статуса заказа
+        rus_state = ''
+        for state_tuple in STATE_CHOICES:
+            if state_tuple[0] == obj.state:
+                rus_state = state_tuple[1]
+                break
+
+        title = f"Обновление статуса заказа {obj.id}"
+        message = f'Заказ {obj.id} получил статус {rus_state}.'
+        addressee_list = [obj.user.email]
+        send_email_task.delay(title, message, addressee_list)
 
 
 class AddressInline(admin.StackedInline):

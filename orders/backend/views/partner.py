@@ -13,11 +13,11 @@ from rest_framework.views import APIView
 
 from ..models import (
     Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
-    Order, Delivery
+    Order, Delivery, ConfirmEmailToken
 )
 from ..serializers import PartnerSerializer, ShopSerializer, \
-    OrderSerializer, PartnerOrderSerializer, DeliverySerializer
-from ..signals import new_user_registered, price_list_updated
+    PartnerOrderSerializer, DeliverySerializer
+from ..tasks import send_email_task
 
 
 class RegisterPartner(APIView):
@@ -53,8 +53,15 @@ class RegisterPartner(APIView):
                 user = partner_serializer.save()
                 user.set_password(request.data['password'])
                 user.save()
-                new_user_registered.send(sender=self.__class__,
-                                         user_id=user.id)
+
+                # отправляем письмо с подтверждением почты
+                token, _ = ConfirmEmailToken.objects.get_or_create(
+                    user_id=user.id
+                )
+                title = f"Password Reset Token for {token.user.email}"
+                message = token.key
+                addressee_list = [token.user.email]
+                send_email_task.delay(title, message, addressee_list)
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
@@ -105,9 +112,13 @@ class PartnerUpdate(APIView):
                                          partial=True)
         if shop_serializer.is_valid():
             shop_serializer.save()
-            price_list_updated.send(sender=self.__class__,
-                                    user=request.user,
-                                    shop_name=shop_serializer.data['name'])
+
+            # отправляем письмо администратору о новом прайс-листе
+            title = f"{shop_serializer.data['name']}: обновление прайса"
+            message = (f"Пользователь {request.user} сообщил о новом "
+                       f"прайс-листе магазина {shop_serializer.data['name']}")
+            addressee_list = [request.user.email]
+            send_email_task.delay(title, message, addressee_list)
 
             return JsonResponse({'Status': True})
         else:

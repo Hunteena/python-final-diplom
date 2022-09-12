@@ -11,7 +11,7 @@ from ..models import (
 from ..serializers import ShopSerializer, \
     OrderSerializer, ProductInfoSerializer, OrderItemSerializer, \
     CategorySerializer, ShopOrderSerializer
-from ..signals import order_state_changed
+from ..tasks import send_email_task
 
 
 class CategoryView(ListAPIView):
@@ -294,8 +294,18 @@ class OrderView(APIView):
                 {'Status': False, 'Errors': 'Адрес не найден'}, status=400
             )
         else:
-            order_state_changed.send(sender=self.__class__,
-                                     user_id=request.user.id,
-                                     order_id=basket.id,
-                                     state='new')
+            # отправляем письмо пользователю об изменении статуса заказа
+            title = f"Обновление статуса заказа {basket.id}"
+            message = f'Заказ {basket.id} получил статус Новый.'
+            addressee_list = [basket.user.email]
+            send_email_task.delay(title, message, addressee_list)
+
+            # отправляем письмо администратору о новом заказе
+            title = f"Новый заказ от {basket.user}"
+            message = (f'Пользователем {basket.user} оформлен '
+                       f'новый заказ {basket.id}.')
+            # TODO where to store admin's email?
+            addressee_list = ['admin_email@example.com']
+            send_email_task.delay(title, message, addressee_list)
+
             return JsonResponse({'Status': True})

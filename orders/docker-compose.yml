@@ -11,4 +11,15 @@ services:
       - "5432:5432"
     networks:
       dev_network:
+        aliases:
+          - db_main
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    networks:
+      dev_network:
+        aliases:
+          - db_redis
 

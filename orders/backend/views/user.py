@@ -10,7 +10,7 @@ from ..models import (
     ConfirmEmailToken, Address
 )
 from ..serializers import UserSerializer, AddressSerializer
-from ..signals import new_user_registered
+from ..tasks import send_email_task
 
 
 class RegisterAccount(APIView):
@@ -49,8 +49,14 @@ class RegisterAccount(APIView):
                 user = user_serializer.save()
                 user.set_password(request.data['password'])
                 user.save()
-                new_user_registered.send(sender=self.__class__,
-                                         user_id=user.id)
+                # отправляем письмо с подтверждением почты
+                token, _ = ConfirmEmailToken.objects.get_or_create(
+                    user_id=user.id
+                )
+                title = f"Password Reset Token for {token.user.email}"
+                message = token.key
+                addressee_list = [token.user.email]
+                send_email_task.delay(title, message, addressee_list)
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
