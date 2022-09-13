@@ -6,20 +6,45 @@ networks:
 services:
   db:
     image: postgres:13.4
+    container_name: ${POSTGRES_HOST}
     env_file: .env
     ports:
       - "5432:5432"
     networks:
       dev_network:
-        aliases:
-          - db_main
 
   redis:
     image: redis
+    container_name: ${REDIS_HOST}
     ports:
       - "6379:6379"
     networks:
       dev_network:
-        aliases:
-          - db_redis
 
+  worker:
+    build:
+      context: .
+    depends_on:
+      - redis
+    user: nobody
+    env_file: .env
+    command: celery -A orders.celery_app worker --loglevel=INFO
+    volumes:
+      - .:/orders
+    networks:
+      dev_network:
+
+  web:
+    depends_on:
+      - db
+      - redis
+    build:
+      context: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/orders
+    command: python manage.py runserver 0.0.0.0:8000
+    networks:
+      dev_network:

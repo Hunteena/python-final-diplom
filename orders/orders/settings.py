@@ -14,6 +14,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import environ
 import os
 
+# TODO check .env.dist
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)
@@ -96,7 +97,7 @@ DATABASES = {
         'NAME': env('POSTGRES_DB'),
         'USER': env('POSTGRES_USER'),
         'PASSWORD': env('POSTGRES_PASSWORD'),
-        'HOST': '127.0.0.1',
+        'HOST': env('POSTGRES_HOST'),
         'PORT': '5432',
     }
 }
@@ -155,5 +156,6 @@ REST_FRAMEWORK = {
 }
 
 # Celery settings
-CELERY_BROKER_URL = "redis://localhost:6379"
-CELERY_RESULT_BACKEND = "redis://localhost:6379"
+REDIS_HOST = env('REDIS_HOST')
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379'

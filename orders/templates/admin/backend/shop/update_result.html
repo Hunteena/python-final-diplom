@@ -17,17 +17,17 @@
 {% endblock %}
 
 {% block content %}
-<p>{% if updated %} Успешно обновлены прайс-листы магазинов: {% endif %}
-{% for shop in updated %}
+<p>{% if updating %} Обновляются прайс-листы магазинов: {% endif %}
+{% for shop in updating %}
     <ul>{{ shop }}</ul>
 {% endfor %}
 </p>
-<p>{% if already_updated %} Не были обновлены, так как уже актуальны: {% endif %}
+<p>{% if already_updated %} Не будут обновлены, так как уже актуальны: {% endif %}
 {% for shop in already_updated %}
     <ul>{{ shop }}</ul>
 {% endfor %}
 </p>
-<p>{% if not_updated %} Не удалось обновить: {% endif %}
+<p>{% if not_updated %} Невозможно обновить: {% endif %}
 {% for shop, error in not_updated.items %}
     <ul>{{ shop }}: error</ul>
 {% endfor %}

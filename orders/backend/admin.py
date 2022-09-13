@@ -13,7 +13,7 @@ from .models import (
     User, ConfirmEmailToken, Address, Order, OrderItem, Delivery, Product,
     Parameter, STATE_CHOICES
 )
-from .tasks import send_email_task
+from .tasks import send_email_task, do_import_task
 
 
 # Register your models here.
@@ -152,7 +152,7 @@ class ShopAdmin(admin.ModelAdmin):
             title='Результат операции'
         )
         ids = request.GET.get('ids')
-        updated, not_updated, already_updated = [], dict(), []
+        updating, not_updated, already_updated = [], dict(), []
 
         for shop_id in ids.split(','):
             shop = Shop.objects.get(id=shop_id)
@@ -180,45 +180,10 @@ class ShopAdmin(admin.ModelAdmin):
                 continue
 
             data = yaml.safe_load(stream)
+            do_import_task.delay(shop_id, data)
+            updating.append(data['shop'])
 
-            # TODO clear shop categories?
-            for category in data['categories']:
-                category_object, _ = Category.objects.get_or_create(
-                    id=category['id'], name=category['name']
-                )
-                category_object.shops.add(shop.id)
-                category_object.save()
-            ProductInfo.objects.filter(shop_id=shop.id).delete()
-            for item in data['goods']:
-                product, _ = Product.objects.get_or_create(
-                    name=item['name'], category_id=item['category']
-                )
-
-                product_info = ProductInfo.objects.create(
-                    product_id=product.id,
-                    external_id=item['id'],
-                    model=item['model'],
-                    price=item['price'],
-                    price_rrc=item['price_rrc'],
-                    quantity=item['quantity'],
-                    shop_id=shop.id
-                )
-                for name, value in item['parameters'].items():
-                    parameter_object, _ = Parameter.objects.get_or_create(
-                        name=name
-                    )
-                    ProductParameter.objects.create(
-                        product_info_id=product_info.id,
-                        parameter_id=parameter_object.id,
-                        value=value
-                    )
-
-            shop.name = data['shop']
-            shop.is_uptodate = True
-            shop.save()
-            updated.append(shop)
-
-        context.update(updated=updated,
+        context.update(updating=updating,
                        not_updated=not_updated,
                        already_updated=already_updated)
         return TemplateResponse(request,
