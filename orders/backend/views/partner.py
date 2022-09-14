@@ -1,33 +1,35 @@
 import datetime
 from distutils.util import strtobool
 
-import requests as rqs
-import yaml
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db.models import Sum, F
 from django.http import JsonResponse
+from rest_framework import viewsets, mixins
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from ..models import (
-    Shop, Category, ProductInfo, Product, Parameter, ProductParameter,
-    Order, Delivery, ConfirmEmailToken
-)
+from ..models import User, ConfirmEmailToken, Shop, Order, Delivery
 from ..serializers import PartnerSerializer, ShopSerializer, \
     PartnerOrderSerializer, DeliverySerializer
 from ..tasks import send_email_task
 
 
-class RegisterPartner(APIView):
+class PartnerViewSet(viewsets.GenericViewSet):
     """
-    Для регистрации поставщиков
+    Viewset для работы с поставщиками
     """
+    queryset = User.objects.filter(type='shop')
+    serializer_class = PartnerSerializer
+    permission_classes = [IsAuthenticated]
 
-    # Регистрация методом POST
-    def post(self, request, *args, **kwargs):
-
+    @action(methods=['post'], detail=False, permission_classes=[])
+    def register(self, request):
+        """
+        Регистрация поставщика
+        """
         # проверяем обязательные аргументы
         if not {'email', 'password', 'company'}.issubset(request.data):
             return JsonResponse(
@@ -42,7 +44,7 @@ class RegisterPartner(APIView):
         except Exception as password_error:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': {'password': list(password_error)}},
+                 'Errors': {'password': str(password_error)}},
                 status=400
             )
         else:
@@ -69,19 +71,12 @@ class RegisterPartner(APIView):
                     status=400
                 )
 
-
-class PartnerUpdate(APIView):
-    """
-    Класс для получения информации для обновления прайс-листа
-    """
-
-    def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'Status': False, 'Error': 'Log in required'},
-                status=403
-            )
-
+    @action(methods=['post'], detail=False, url_path='update')
+    def price_info(self, request):
+        """
+        Получение информации для обновления прайс-листа
+        """
+        # TODO permission IsShop?
         if request.user.type != 'shop':
             return JsonResponse(
                 {'Status': False, 'Error': 'Только для магазинов'},
@@ -108,8 +103,7 @@ class PartnerUpdate(APIView):
 
         shop, _ = Shop.objects.get_or_create(user_id=request.user.id)
         data['name'] = f"- Актуализируйте прайс-лист -"
-        shop_serializer = ShopSerializer(shop, data=data,
-                                         partial=True)
+        shop_serializer = ShopSerializer(shop, data=data, partial=True)
         if shop_serializer.is_valid():
             shop_serializer.save()
 
@@ -127,72 +121,46 @@ class PartnerUpdate(APIView):
                 status=400
             )
 
-
-class PartnerState(APIView):
-    """
-    Класс для работы со статусом поставщика
-    """
-
+    @action(methods=['get', 'post'], detail=False, url_path='state')
     # получить текущий статус
-    def get(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'Status': False, 'Error': 'Log in required'}, status=403
-            )
+    def state(self, request):
 
         if request.user.type != 'shop':
             return JsonResponse(
                 {'Status': False, 'Error': 'Только для магазинов'}, status=403
             )
 
-        shop = request.user.shop
-        serializer = ShopSerializer(shop)
-        return Response(serializer.data['state'])
+        if request.method == 'GET':
+            shop = request.user.shop
+            serializer = ShopSerializer(shop)
+            return Response(serializer.data['state'])
 
-    # изменить текущий статус
-    def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'Status': False, 'Error': 'Log in required'}, status=403
-            )
+        else:
+            state = request.data.get('state')
+            if not state:
+                return JsonResponse(
+                    {'Status': False,
+                     'Errors': 'Не указаны все необходимые аргументы'},
+                    status=400
+                )
 
-        if request.user.type != 'shop':
-            return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'}, status=403
-            )
+            try:
+                Shop.objects.filter(
+                    user_id=request.user.id
+                ).update(
+                    state=strtobool(state)
+                )
+                return JsonResponse({'Status': True})
+            except ValueError as error:
+                return JsonResponse(
+                    {'Status': False, 'Errors': str(error)}, status=400
+                )
 
-        state = request.data.get('state')
-        if not state:
-            return JsonResponse(
-                {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'},
-                status=400
-            )
-
-        try:
-            Shop.objects.filter(
-                user_id=request.user.id
-            ).update(
-                state=strtobool(state)
-            )
-            return JsonResponse({'Status': True})
-        except ValueError as error:
-            return JsonResponse(
-                {'Status': False, 'Errors': str(error)}, status=400
-            )
-
-
-class PartnerOrders(APIView):
-    """
-    Класс для получения заказов поставщиками
-    """
-
-    def get(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {'Status': False, 'Error': 'Log in required'}, status=403
-            )
-
+    @action(detail=False)
+    def orders(self, request):
+        """
+        Просмотр заказов поставщика
+        """
         if request.user.type != 'shop':
             return JsonResponse(
                 {'Status': False, 'Error': 'Только для магазинов'}, status=403
@@ -217,35 +185,45 @@ class PartnerOrders(APIView):
                                             many=True)
         return Response(serializer.data)
 
+    @action(methods=['get', 'post'], detail=False)
+    def delivery(self, request):
+        if request.user.type != 'shop':
+            return JsonResponse(
+                {'Status': False, 'Error': 'Только для магазинов'}, status=403
+            )
 
-class DeliveryView(APIView):
-    """
-    Класс для стоимости доставки
-    """
-
-    def get(self, request, *args, **kwargs):
-        shop = request.GET.get('shop')
-        if shop:
-            delivery = Delivery.objects.filter(shop=shop).order_by('-min_sum')
+        if request.method == 'GET':
+            delivery = Delivery.objects.filter(
+                shop=request.user.shop
+            ).order_by('min_sum')
+            serializer = DeliverySerializer(delivery, many=True)
+            return Response(serializer.data)
         else:
-            delivery = Delivery.objects.order_by('shop', '-min_sum')
-        serializer = DeliverySerializer(delivery, many=True)
-        return Response(serializer.data)
+            delivery = request.data.get('delivery')
+            if not delivery:
+                return JsonResponse(
+                    {'Status': False,
+                     'Errors': 'Не указаны все необходимые аргументы'},
+                    status=400
+                )
+            for item in delivery:
+                delivery_obj = Delivery.objects.filter(
+                    shop=request.user.shop, min_sum=item['min_sum']
+                ).first()
+                if delivery_obj:
+                    delivery_serializer = DeliverySerializer(
+                        delivery_obj, data={'cost': item['cost']}, partial=True
+                    )
+                else:
+                    data = {'shop': request.user.shop.id, **item}
+                    delivery_serializer = DeliverySerializer(data=data)
 
-    # def post(self, request, *args, **kwargs):
-    #     if not request.user.is_authenticated:
-    #         return JsonResponse(
-    #             {'Status': False, 'Error': 'Log in required'}, status=403
-    #         )
-    #
-    #     if request.user.type != 'shop':
-    #         return JsonResponse(
-    #             {'Status': False, 'Error': 'Только для магазинов'}, status=403
-    #         )
-    #
-    #     if not {'min_sum', 'street'}.issubset(request.data):
-    #         return JsonResponse(
-    #             {'Status': False,
-    #              'Errors': 'Не указаны все необходимые аргументы'},
-    #             status=400
-    #         )
+                if delivery_serializer.is_valid():
+                    delivery_serializer.save()
+                    return JsonResponse({'Status': True})
+                else:
+                    return JsonResponse(
+                        {'Status': False,
+                         'Errors': delivery_serializer.errors},
+                        status=400
+                    )

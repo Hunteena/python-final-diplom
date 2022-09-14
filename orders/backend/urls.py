@@ -1,17 +1,22 @@
 from django.urls import path
 from django_rest_passwordreset.views import reset_password_request_token, \
     reset_password_confirm
+from rest_framework.routers import DefaultRouter
 
+from .views import PartnerViewSet
 from .views import PartnerUpdate, RegisterPartner, RegisterAccount, \
     ConfirmAccount, LoginAccount, PartnerState, PartnerOrders, AccountDetails, \
     AddressView, CategoryView, ShopView, ProductInfoView, BasketView, \
     OrderView, DeliveryView
 
+router = DefaultRouter()
+router.register(r'partner', PartnerViewSet, basename='partner')
+
 urlpatterns = [
-    path('partner/register/', RegisterPartner.as_view(), name='partner-register'),
-    path('partner/update/', PartnerUpdate.as_view(), name='partner-update'),
-    path('partner/state/', PartnerState.as_view(), name='partner-state'),
-    path('partner/orders/', PartnerOrders.as_view(), name='partner-orders'),
+    # path('partner/register/', RegisterPartner.as_view(), name='partner-register'),
+    # path('partner/update/', PartnerUpdate.as_view(), name='partner-update'),
+    # path('partner/state/', PartnerState.as_view(), name='partner-state'),
+    # path('partner/orders/', PartnerOrders.as_view(), name='partner-orders'),
 
     path('user/register/', RegisterAccount.as_view(), name='user-register'),
     path('user/register/confirm/', ConfirmAccount.as_view(), name='user-register-confirm'),
@@ -27,4 +32,4 @@ urlpatterns = [
     path('basket/', BasketView.as_view(), name='basket'),
     path('order/', OrderView.as_view(), name='order'),
     path('delivery/', DeliveryView.as_view(), name='delivery'),
-]
+] + router.urls

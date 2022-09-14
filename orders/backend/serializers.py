@@ -53,11 +53,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class DeliverySerializer(serializers.ModelSerializer):
-    # shop = ShopSerializer(read_only=True)
+    # TODO check delivery costs
 
     class Meta:
         model = Delivery
-        fields = ['min_sum', 'cost']
+        fields = ['shop', 'min_sum', 'cost']
+        extra_kwargs = {
+            'shop': {'write_only': True},
+        }
         # read_only_fields = ['id']
 
 
@@ -75,10 +78,12 @@ class ShopSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'state', 'delivery', 'file', 'url',
                   'update_dt', 'is_uptodate']
         read_only_fields = ['id']
-        # extra_kwargs = {
-        #     'update_dt': {'write_only': True},
-        #     'is_uptodate': {'write_only': True},
-        # }
+        extra_kwargs = {
+            'file': {'write_only': True},
+            'url': {'write_only': True},
+            'update_dt': {'write_only': True},
+            'is_uptodate': {'write_only': True},
+        }
 
 
 class ProductSerializer(serializers.ModelSerializer):
