@@ -1,6 +1,7 @@
 import datetime
 from distutils.util import strtobool
 
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -28,8 +29,11 @@ class PartnerViewSet(viewsets.GenericViewSet):
     @action(methods=['post'], detail=False, permission_classes=[])
     def register(self, request):
         """
-        Регистрация поставщика
+        Регистрация поставщика.
+        После регистрации администратору необходимо активировать поставщика
+        для начала работы.
         """
+
         # проверяем обязательные аргументы
         if not {'email', 'password', 'company'}.issubset(request.data):
             return JsonResponse(
@@ -49,7 +53,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
             )
         else:
             # проверяем данные для уникальности имени пользователя
-            partner_serializer = PartnerSerializer(data=request.data)
+            partner_serializer = self.get_serializer(data=request.data)
             if partner_serializer.is_valid():
                 # сохраняем пользователя
                 user = partner_serializer.save()
@@ -64,6 +68,14 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 message = token.key
                 addressee_list = [token.user.email]
                 send_email_task.delay(title, message, addressee_list)
+
+                # отправляем письмо администратору
+                title = f"Новый поставщик: {user}"
+                message = (f"Зарегистрировался новый поставщик: {user}. "
+                           f"Для начала работы необходимо его активировать.")
+                addressee_list = [settings.ADMIN_EMAIL]
+                send_email_task.delay(title, message, addressee_list)
+
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
@@ -111,7 +123,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
             title = f"{shop_serializer.data['name']}: обновление прайса"
             message = (f"Пользователь {request.user} сообщил о новом "
                        f"прайс-листе магазина {shop_serializer.data['name']}")
-            addressee_list = [request.user.email]
+            addressee_list = [settings.ADMIN_EMAIL]
             send_email_task.delay(title, message, addressee_list)
 
             return JsonResponse({'Status': True})

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import IntegrityError
 from django.db.models import Sum, F, Q
 from django.http import JsonResponse
@@ -304,8 +305,7 @@ class OrderView(APIView):
             title = f"Новый заказ от {basket.user}"
             message = (f'Пользователем {basket.user} оформлен '
                        f'новый заказ {basket.id}.')
-            # TODO where to store admin's email?
-            addressee_list = ['admin_email@example.com']
+            addressee_list = [settings.ADMIN_EMAIL]
             send_email_task.delay(title, message, addressee_list)
 
             return JsonResponse({'Status': True})

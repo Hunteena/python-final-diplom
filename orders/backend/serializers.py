@@ -7,10 +7,20 @@ from .models import User, Shop, Product, ProductParameter, \
 
 
 class AddressSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        # Don't pass the 'user_id' arg up to the superclass
+        user_id = kwargs.pop('user_id', None)
+
+        # Instantiate the superclass normally
+        super().__init__(*args, **kwargs)
+
+        if user_id and kwargs.get('data'):
+            self.initial_data['user'] = user_id
+
     def validate(self, attrs):
         MAX_ADDRESS_COUNT = 5
         address_count = Address.objects.filter(
-            user_id=attrs['user']
+            user_id=self.initial_data['user']
         ).count()
         if address_count >= MAX_ADDRESS_COUNT:
             raise ValidationError(

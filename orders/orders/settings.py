@@ -148,7 +148,7 @@ AUTH_USER_MODEL = 'backend.User'
 
 # TODO send real emails
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST_USER = 'my_email@example.com'
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -160,3 +160,5 @@ REST_FRAMEWORK = {
 REDIS_HOST = env('REDIS_HOST')
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379'
+
+ADMIN_EMAIL = env('ADMIN_EMAIL')

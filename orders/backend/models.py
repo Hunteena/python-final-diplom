@@ -237,7 +237,7 @@ class ProductParameter(models.Model):
 class Address(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              verbose_name='Пользователь',
-                             related_name='contacts',
+                             related_name='addresses',
                              on_delete=models.CASCADE)
 
     city = models.CharField(max_length=50, verbose_name='Город')
