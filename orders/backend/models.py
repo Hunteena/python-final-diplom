@@ -98,14 +98,14 @@ class User(AbstractUser):
         ordering = ('company',)
 
 
-def shop_directory_path(instance, filename):
+def shop_pricelist_dir_path(instance, filename):
     return f'price_lists/shop_{instance.id}/{filename}'
 
 
 class Shop(models.Model):
     name = models.CharField(max_length=50, verbose_name='Название')
     url = models.URLField(verbose_name='Ссылка', null=True, blank=True)
-    file = models.FileField(upload_to=shop_directory_path,
+    file = models.FileField(upload_to=shop_pricelist_dir_path,
                             verbose_name='Файл',
                             null=True,
                             blank=True)

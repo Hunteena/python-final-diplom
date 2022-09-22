@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
 from django.http import JsonResponse
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -38,7 +38,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Не указаны все необходимые аргументы'},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         # проверяем пароль на сложность
@@ -48,7 +48,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': {'password': list(password_error)}},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
         else:
             # проверяем данные для уникальности имени пользователя
@@ -70,7 +70,7 @@ class UserViewSet(viewsets.GenericViewSet):
             else:
                 return JsonResponse(
                     {'Status': False, 'Errors': user_serializer.errors},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
     @action(methods=['post'], detail=False, url_path='register/confirm')
@@ -84,7 +84,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Не указаны все необходимые аргументы'},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         token = ConfirmEmailToken.objects.filter(
@@ -100,7 +100,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Неправильно указан токен или email'},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(methods=['post'], detail=False)
@@ -113,7 +113,7 @@ class UserViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Не указаны все необходимые аргументы'},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         user = authenticate(request, username=request.data['email'],
@@ -126,7 +126,8 @@ class UserViewSet(viewsets.GenericViewSet):
                 return JsonResponse({'Status': True, 'Token': token.key})
 
         return JsonResponse(
-            {'Status': False, 'Errors': 'Не удалось авторизовать'}, status=400
+            {'Status': False, 'Errors': 'Не удалось авторизовать'},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     @action(methods=['get', 'post'], detail=False, url_path='details',
@@ -148,7 +149,7 @@ class UserViewSet(viewsets.GenericViewSet):
                     return JsonResponse(
                         {'Status': False,
                          'Errors': {'password': list(password_error)}},
-                        status=400
+                        status=status.HTTP_400_BAD_REQUEST
                     )
                 else:
                     request.user.set_password(request.data['password'])
@@ -162,7 +163,8 @@ class UserViewSet(viewsets.GenericViewSet):
                 return JsonResponse({'Status': True})
             else:
                 return JsonResponse(
-                    {'Status': False, 'Errors': user_serializer.errors}, status=400
+                    {'Status': False, 'Errors': user_serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
 

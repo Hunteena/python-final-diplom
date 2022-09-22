@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db.models import Sum, F
 from django.http import JsonResponse
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -39,7 +39,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': 'Не указаны все необходимые аргументы'},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         # проверяем пароль на сложность
@@ -49,7 +49,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
             return JsonResponse(
                 {'Status': False,
                  'Errors': {'password': str(password_error)}},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
         else:
             # проверяем данные для уникальности имени пользователя
@@ -76,11 +76,12 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 addressee_list = [settings.ADMIN_EMAIL]
                 send_email_task.delay(title, message, addressee_list)
 
-                return JsonResponse({'Status': True})
+                return JsonResponse({'Status': True},
+                                    status=status.HTTP_201_CREATED)
             else:
                 return JsonResponse(
                     {'Status': False, 'Errors': partner_serializer.errors},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
     @action(methods=['post'], detail=False, url_path='update')
@@ -92,7 +93,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
         if request.user.type != 'shop':
             return JsonResponse(
                 {'Status': False, 'Error': 'Только для магазинов'},
-                status=403
+                status=status.HTTP_403_FORBIDDEN
             )
 
         data = {'file': None, 'url': None,
@@ -107,14 +108,16 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 validate_url(url)
             except ValidationError as e:
                 return JsonResponse({'Status': False, 'Error': str(e)},
-                                    status=400)
+                                    status=status.HTTP_400_BAD_REQUEST)
             data['url'] = url
         else:
             return JsonResponse({'Status': False,
-                                 'Error': 'Необходим либо файл, либо ссылка.'})
+                                 'Error': 'Необходим либо файл, либо ссылка.'},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-        shop, _ = Shop.objects.get_or_create(user_id=request.user.id)
-        data['name'] = f"- Актуализируйте прайс-лист -"
+        shop, created = Shop.objects.get_or_create(user_id=request.user.id)
+        if created:
+            data['name'] = f"- Актуализируйте прайс-лист -"
         shop_serializer = ShopSerializer(shop, data=data, partial=True)
         if shop_serializer.is_valid():
             shop_serializer.save()
@@ -130,7 +133,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
         else:
             return JsonResponse(
                 {'Status': False, 'Errors': shop_serializer.errors},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(methods=['get', 'post'], detail=False, url_path='state')
@@ -139,13 +142,21 @@ class PartnerViewSet(viewsets.GenericViewSet):
 
         if request.user.type != 'shop':
             return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'}, status=403
+                {'Status': False, 'Error': 'Только для магазинов'},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         if request.method == 'GET':
-            shop = request.user.shop
-            serializer = ShopSerializer(shop)
-            return Response(serializer.data['state'])
+            try:
+                shop = request.user.shop
+            except Exception as e:
+                return JsonResponse(
+                    {'Status': False, 'Error': str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            else:
+                serializer = ShopSerializer(shop)
+                return Response(serializer.data['state'])
 
         else:
             state = request.data.get('state')
@@ -153,7 +164,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 return JsonResponse(
                     {'Status': False,
                      'Errors': 'Не указаны все необходимые аргументы'},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
             try:
@@ -165,7 +176,8 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 return JsonResponse({'Status': True})
             except ValueError as error:
                 return JsonResponse(
-                    {'Status': False, 'Errors': str(error)}, status=400
+                    {'Status': False, 'Errors': str(error)},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
     @action(detail=False)
@@ -175,7 +187,8 @@ class PartnerViewSet(viewsets.GenericViewSet):
         """
         if request.user.type != 'shop':
             return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'}, status=403
+                {'Status': False, 'Error': 'Только для магазинов'},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         order = Order.objects.filter(
@@ -201,7 +214,8 @@ class PartnerViewSet(viewsets.GenericViewSet):
     def delivery(self, request):
         if request.user.type != 'shop':
             return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'}, status=403
+                {'Status': False, 'Error': 'Только для магазинов'},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         if request.method == 'GET':
@@ -216,7 +230,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 return JsonResponse(
                     {'Status': False,
                      'Errors': 'Не указаны все необходимые аргументы'},
-                    status=400
+                    status=status.HTTP_400_BAD_REQUEST
                 )
             for item in delivery:
                 delivery_obj = Delivery.objects.filter(
@@ -237,5 +251,5 @@ class PartnerViewSet(viewsets.GenericViewSet):
                     return JsonResponse(
                         {'Status': False,
                          'Errors': delivery_serializer.errors},
-                        status=400
+                        status=status.HTTP_400_BAD_REQUEST
                     )
