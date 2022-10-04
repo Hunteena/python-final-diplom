@@ -1,4 +1,5 @@
 from django.db.models import Sum, F
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -39,6 +40,7 @@ class AddressSerializer(serializers.ModelSerializer):
         }
 
 
+@extend_schema_serializer(exclude_fields=['is_active'])
 class PartnerSerializer(serializers.ModelSerializer):
     is_active = serializers.BooleanField(default=False)
     type = serializers.CharField(default='shop', write_only=True)
@@ -52,6 +54,7 @@ class PartnerSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+@extend_schema_serializer(exclude_fields=['address'])
 class UserSerializer(serializers.ModelSerializer):
     address = AddressSerializer(read_only=True, many=True)
 
@@ -62,6 +65,24 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
 
+class UserWithPasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'password', 'last_name', 'first_name', 'patronymic',
+                  'company', 'position', 'phone']
+
+
+@extend_schema_serializer(
+    exclude_fields=['shop'],  # schema ignore these fields
+    # examples=[
+    #     OpenApiExample(
+    #             name='delivery request example', request_only=True,
+    #             value={"delivery": [{"min_sum": 10000, "cost": 0}]},
+    #         ),
+    # ]
+)
 class DeliverySerializer(serializers.ModelSerializer):
     # TODO check delivery costs
 
@@ -137,6 +158,7 @@ class OrderProductInfoSerializer(ProductInfoSerializer):
         read_only_fields = ['id']
 
 
+@extend_schema_serializer(exclude_fields=['order'])
 class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem

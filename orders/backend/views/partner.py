@@ -7,14 +7,19 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db.models import Sum, F
 from django.http import JsonResponse
-from rest_framework import viewsets, mixins, status
+from drf_spectacular.utils import extend_schema, inline_serializer
+from orders.schema import (PARTNER_ORDERS_RESPONSE,
+                           StatusTrueSerializer, StatusFalseSerializer)
+from rest_framework import viewsets, status, fields, parsers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ..models import User, ConfirmEmailToken, Shop, Order, Delivery
-from ..serializers import PartnerSerializer, ShopSerializer, \
-    PartnerOrderSerializer, DeliverySerializer
+from ..permissions import IsShop
+from ..serializers import (PartnerSerializer, ShopSerializer,
+                           PartnerOrderSerializer, DeliverySerializer,
+                           UserWithPasswordSerializer)
 from ..tasks import send_email_task
 
 
@@ -24,12 +29,17 @@ class PartnerViewSet(viewsets.GenericViewSet):
     """
     queryset = User.objects.filter(type='shop')
     serializer_class = PartnerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsShop]
 
+    @extend_schema(
+        request=UserWithPasswordSerializer,
+        responses={201: StatusTrueSerializer, 400: StatusFalseSerializer}
+    )
     @action(methods=['post'], detail=False, permission_classes=[])
     def register(self, request):
         """
         Регистрация поставщика.
+        Отправка почты администратору о регистрации нового поставщика.
         После регистрации администратору необходимо активировать поставщика
         для начала работы.
         """
@@ -84,17 +94,18 @@ class PartnerViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-    @action(methods=['post'], detail=False, url_path='update')
+    @extend_schema(
+        request=inline_serializer('PriceInfoUploadSerializer',
+                                  {'url': fields.URLField(required=False),
+                                   'file': fields.FileField(required=False)}),
+        responses={200: StatusTrueSerializer, 400: StatusFalseSerializer},
+    )
+    @action(methods=['post'], detail=False, url_path='update',
+            parser_classes=[parsers.MultiPartParser])
     def price_info(self, request):
         """
-        Получение информации для обновления прайс-листа
+        Загрузка файла или ссылки для обновления прайс-листа
         """
-        # TODO permission IsShop?
-        if request.user.type != 'shop':
-            return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'},
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         data = {'file': None, 'url': None,
                 'update_dt': datetime.date.today(), 'is_uptodate': False}
@@ -136,15 +147,18 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(methods=['get', 'post'], detail=False, url_path='state')
-    # получить текущий статус
+    @extend_schema(methods=['get'], responses=ShopSerializer,
+                   description='Получение статуса поставщика')
+    @extend_schema(methods=['post'],
+                   description="Изменение статуса поставщика",
+                   request=inline_serializer('ChangeShopStateSerializer',
+                                             {'state': fields.BooleanField()}),
+                   responses={200: ShopSerializer, 400: StatusFalseSerializer})
+    @action(methods=['get', 'post'], detail=False)
     def state(self, request):
-
-        if request.user.type != 'shop':
-            return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        """
+        Получение и изменение текущего статуса поставщика
+        """
 
         if request.method == 'GET':
             try:
@@ -156,7 +170,7 @@ class PartnerViewSet(viewsets.GenericViewSet):
                 )
             else:
                 serializer = ShopSerializer(shop)
-                return Response(serializer.data['state'])
+                return Response(serializer.data)
 
         else:
             state = request.data.get('state')
@@ -180,16 +194,12 @@ class PartnerViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+    @extend_schema(examples=[PARTNER_ORDERS_RESPONSE])
     @action(detail=False)
     def orders(self, request):
         """
         Просмотр заказов поставщика
         """
-        if request.user.type != 'shop':
-            return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'},
-                status=status.HTTP_403_FORBIDDEN
-            )
 
         order = Order.objects.filter(
             ordered_items__product_info__shop__user_id=request.user.id
@@ -210,13 +220,24 @@ class PartnerViewSet(viewsets.GenericViewSet):
                                             many=True)
         return Response(serializer.data)
 
+    @extend_schema(methods=['get'], description='Получение стоимости доставки',
+                   responses=DeliverySerializer(many=True))
+    @extend_schema(
+        methods=['post'],
+        description='Добавление или изменение стоимости доставки '
+                    'для указанной минимальной суммы.',
+        request=inline_serializer(
+            'UpdateDeliverySerializer',
+            {'delivery': fields.ListField(child=DeliverySerializer())}
+        ),
+        responses={200: DeliverySerializer(many=True),
+                   400: StatusFalseSerializer},
+    )
     @action(methods=['get', 'post'], detail=False)
     def delivery(self, request):
-        if request.user.type != 'shop':
-            return JsonResponse(
-                {'Status': False, 'Error': 'Только для магазинов'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        """
+        Получение и изменение стоимости доставки
+        """
 
         if request.method == 'GET':
             delivery = Delivery.objects.filter(

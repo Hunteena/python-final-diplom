@@ -25,8 +25,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Take environment variables from .env file
 # environ.Env.read_env()
-# environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
-environ.Env.read_env(os.path.join(BASE_DIR, '.env.dev'))
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -49,12 +48,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # 'backend.apps.BackendConfig',
     'rest_framework',
     'rest_framework.authtoken',
     'django_rest_passwordreset',
     'backend',
-
+    'drf_spectacular'
 ]
 
 MIDDLEWARE = [
@@ -155,6 +153,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication'
     ],
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # Celery settings
@@ -163,3 +162,13 @@ CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379'
 
 ADMIN_EMAIL = env('ADMIN_EMAIL')
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Orders API',
+    'DESCRIPTION': 'Описание API сервиса заказа товаров',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+    'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
+    'COMPONENT_SPLIT_REQUEST': True,
+}

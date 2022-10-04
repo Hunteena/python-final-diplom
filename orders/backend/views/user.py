@@ -1,18 +1,18 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.db.models import Q
 from django.http import JsonResponse
-from rest_framework import viewsets, status
+from drf_spectacular.utils import (extend_schema_view, extend_schema,
+                                   inline_serializer)
+from orders.schema import StatusTrueSerializer, StatusFalseSerializer
+from rest_framework import viewsets, status, fields
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from ..models import (
-    ConfirmEmailToken, Address, User
-)
-from ..serializers import UserSerializer, AddressSerializer
+from ..models import ConfirmEmailToken, Address, User
+from ..serializers import (UserSerializer, AddressSerializer,
+                           UserWithPasswordSerializer)
 from ..tasks import send_email_task
 
 
@@ -24,6 +24,10 @@ class UserViewSet(viewsets.GenericViewSet):
     serializer_class = UserSerializer
     permission_classes = []
 
+    @extend_schema(
+        request=UserWithPasswordSerializer,
+        responses={201: StatusTrueSerializer, 400: StatusFalseSerializer}
+    )
     @action(methods=['post'], detail=False, permission_classes=[])
     def register(self, request, *args, **kwargs):
         """
@@ -34,10 +38,12 @@ class UserViewSet(viewsets.GenericViewSet):
         required_fields = {'first_name', 'last_name',
                            'email', 'password',
                            'company', 'position'}
-        if not required_fields.issubset(request.data):
+        absent_required_fields = required_fields.difference(request.data)
+        if absent_required_fields:
             return JsonResponse(
                 {'Status': False,
-                 'Errors': 'Не указаны все необходимые аргументы'},
+                 'Errors': f"Не указаны необходимые аргументы: "
+                           f"{', '.join(absent_required_fields)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -66,13 +72,20 @@ class UserViewSet(viewsets.GenericViewSet):
                 message = token.key
                 addressee_list = [token.user.email]
                 send_email_task.delay(title, message, addressee_list)
-                return JsonResponse({'Status': True})
+                return JsonResponse({'Status': True},
+                                    status=status.HTTP_201_CREATED)
             else:
                 return JsonResponse(
                     {'Status': False, 'Errors': user_serializer.errors},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+    @extend_schema(
+        request=inline_serializer('RegisterConfirmRequestSerializer',
+                                  {'email': fields.EmailField(),
+                                   'token': fields.CharField()}),
+        responses={200: StatusTrueSerializer, 400: StatusFalseSerializer},
+    )
     @action(methods=['post'], detail=False, url_path='register/confirm')
     def register_confirm(self, request, *args, **kwargs):
         """
@@ -103,6 +116,17 @@ class UserViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    @extend_schema(
+        request=inline_serializer('LoginRequestSerializer',
+                                  {'email': fields.EmailField(),
+                                   'password': fields.CharField()}),
+        responses={
+            200: inline_serializer('LoginStatusTrueSerializer',
+                                   {'Status': fields.BooleanField(),
+                                    'Token': fields.CharField()}),
+            400: StatusFalseSerializer
+        },
+    )
     @action(methods=['post'], detail=False)
     def login(self, request, *args, **kwargs):
         """
@@ -130,6 +154,14 @@ class UserViewSet(viewsets.GenericViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    @extend_schema(methods=['get'],
+                   description='Получение данных пользователя.')
+    @extend_schema(methods=['post'],
+                   # TODO serializer without email
+                   request=UserWithPasswordSerializer,
+                   responses={200: StatusTrueSerializer,
+                              400: StatusFalseSerializer},
+                   description='Изменение данных пользователя.')
     @action(methods=['get', 'post'], detail=False, url_path='details',
             permission_classes=[IsAuthenticated])
     def account_details(self, request, *args, **kwargs):
@@ -168,6 +200,20 @@ class UserViewSet(viewsets.GenericViewSet):
                 )
 
 
+@extend_schema_view(
+    list=extend_schema(description='Получение списка адресов '
+                                   'текущего пользователя'),
+    create=extend_schema(description='Регистрация нового адреса'),
+    retrieve=extend_schema(description='Получение адреса по id '
+                                       '(только адреса текущего пользователя)'),
+    update=extend_schema(description='Замена адреса по id '
+                                     '(только адреса текущего пользователя)'),
+    partial_update=extend_schema(description='Изменение данных адреса по id '
+                                             '(только адреса текущего '
+                                             'пользователя)'),
+    destroy=extend_schema(description='Удаление адреса по id '
+                                      '(только адреса текущего пользователя)')
+)
 class AddressViewSet(viewsets.ModelViewSet):
     """
     Viewset для работы с адресами покупателя
@@ -176,121 +222,11 @@ class AddressViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Address.objects.none()
         return self.request.user.addresses.all()
 
     def get_serializer(self, *args, **kwargs):
         serializer_class = self.get_serializer_class()
         kwargs.setdefault('context', self.get_serializer_context())
         return serializer_class(*args, user_id=self.request.user.id, **kwargs)
-
-# class AddressView(APIView):
-#     """
-#     Класс для работы с адресами покупателей
-#     """
-#
-#     # получить мои адреса
-#     def get(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'},
-#                                 status=403)
-#         address = Address.objects.filter(user_id=request.user.id)
-#         serializer = AddressSerializer(address, many=True)
-#         return Response(serializer.data)
-#
-#     # добавить новый адрес
-#     def post(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'},
-#                                 status=403)
-#
-#         if not {'city', 'street'}.issubset(request.data):
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Не указаны все необходимые аргументы'},
-#                 status=400
-#             )
-#
-#         # request.data._mutable = True
-#         request.data.update({'user': request.user.id})
-#         serializer = AddressSerializer(data=request.data)
-#
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse({'Status': True})
-#         else:
-#             return JsonResponse({'Status': False, 'Errors': serializer.errors},
-#                                 status=400)
-#
-#     # удалить адрес
-#     def delete(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'},
-#                                 status=403)
-#
-#         items_list = request.data.get('items')
-#         if not items_list:
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Не указаны все необходимые аргументы'},
-#                 status=400
-#             )
-#
-#         query = Q()
-#         has_objects_to_delete = False
-#         for address_id in items_list:
-#             if type(address_id) == int:
-#                 query = query | Q(user_id=request.user.id, id=address_id)
-#                 has_objects_to_delete = True
-#
-#         if has_objects_to_delete:
-#             deleted = Address.objects.filter(query).delete()
-#             return JsonResponse(
-#                 {'Status': True, 'Удалено объектов': deleted[0]})
-#         else:
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Неправильный формат запроса'},
-#                 status=400
-#             )
-#
-#     # редактировать адрес
-#     def put(self, request, *args, **kwargs):
-#         if not request.user.is_authenticated:
-#             return JsonResponse({'Status': False, 'Error': 'Log in required'},
-#                                 status=403)
-#
-#         if 'id' not in request.data:
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Не указаны все необходимые аргументы'},
-#                 status=400
-#             )
-#
-#         if type(request.data['id']) != int:
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Неправильный формат запроса'},
-#                 status=400
-#             )
-#
-#         address = Address.objects.filter(
-#             id=request.data['id'], user_id=request.user.id
-#         ).first()
-#         if not address:
-#             return JsonResponse(
-#                 {'Status': False,
-#                  'Errors': 'Нет адреса с таким id'},
-#                 status=400
-#             )
-#
-#         request.data.update({'user': request.user.id})
-#         serializer = AddressSerializer(
-#             address, data=request.data, partial=True
-#         )
-#         if serializer.is_valid():
-#             serializer.save()
-#             return JsonResponse({'Status': True})
-#         else:
-#             return JsonResponse(
-#                 {'Status': False, 'Errors': serializer.errors}, status=400
-#             )
