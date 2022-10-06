@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform linux -- Python 3.8.10, pytest-7.1.3, pluggy-1.0.0
+django: settings: orders.settings (from ini)
+configfile: pytest.ini
+plugins: cov-3.0.0, django-4.5.2
+collected 15 items
+
+backend/tests.py ...............                                         [100%]
+
+---------- coverage: platform linux, python 3.8.10-final-0 -----------
+Name                       Stmts   Miss  Cover
+----------------------------------------------
+backend/views/partner.py     121     38    69%
+backend/views/shop.py        132     90    32%
+backend/views/user.py         94     58    38%
+----------------------------------------------
+TOTAL                        347    186    46%
+
+
+============================== 15 passed in 9.74s ==============================

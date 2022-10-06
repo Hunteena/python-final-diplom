@@ -1,0 +1,1438 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  version: ''
+  description: Описание API сервиса заказа товаров
+paths:
+  /api/v1/basket/:
+    get:
+      operationId: basket_retrieve
+      description: Получить корзину
+      tags:
+      - basket
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                BasketResponse:
+                  value:
+                  - id: 0
+                    state: basket
+                    dt: '2022-09-23T05:46:37.532422Z'
+                    total_sum: 0
+                    address: null
+                    shops:
+                    - id: 0
+                      name: string
+                      shop_sum: 0
+                      ordered_items:
+                      - id: 0
+                        quantity: 0
+                        product_info:
+                          id: 0
+                          external_id: 0
+                          model: string
+                          product:
+                            name: string
+                            category: string
+                          product_parameters:
+                          - parameter: string
+                            value: string
+                          price: 0
+                          price_rrc: 0
+                      delivery: 0
+                    total_delivery: 0
+                  summary: basket response
+          description: ''
+    post:
+      operationId: basket_create
+      description: Добавить позиции в корзину
+      tags:
+      - basket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BasketAddRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BasketAddRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BasketAddRequestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasketAddResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+    put:
+      operationId: basket_update
+      description: |-
+        Изменить в корзине количество у указанных позиций.
+        Если новое количество равно 0, то позиция будет удалена из корзины.
+      tags:
+      - basket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BasketUpdateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BasketUpdateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BasketUpdateRequestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BasketUpdateResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/categories/:
+    get:
+      operationId: categories_list
+      description: Класс для просмотра категорий
+      tags:
+      - categories
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/order/:
+    get:
+      operationId: order_retrieve
+      description: Получить мои заказы
+      tags:
+      - order
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              examples:
+                OrderResponse:
+                  value:
+                  - id: 0
+                    state: new
+                    dt: '2022-09-23T05:46:37.532422Z'
+                    total_sum: 0
+                    address:
+                      id: 0
+                      city: string
+                      street: string
+                      house: string
+                      structure: string
+                      building: string
+                      apartment: string
+                    shops:
+                    - id: 0
+                      name: string
+                      shop_sum: 0
+                      ordered_items:
+                      - id: 0
+                        quantity: 0
+                        product_info:
+                          id: 0
+                          external_id: 0
+                          model: string
+                          product:
+                            name: string
+                            category: string
+                          product_parameters:
+                          - parameter: string
+                            value: string
+                          price: 0
+                          price_rrc: 0
+                      delivery: 0
+                    total_delivery: 0
+                  summary: order response
+          description: ''
+    post:
+      operationId: order_create
+      description: |-
+        Разместить заказ из корзины с указанным адресом доставки.
+        Затем отправить почту администратору о новом заказе
+        и клиенту об изменении статуса заказа.
+      tags:
+      - order
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderFromBasketRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderFromBasketRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderFromBasketRequestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/partner/delivery/:
+    get:
+      operationId: partner_delivery_list
+      description: Получение стоимости доставки
+      tags:
+      - partner
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delivery'
+          description: ''
+    post:
+      operationId: partner_delivery_create
+      description: Добавление или изменение стоимости доставки для указанной минимальной
+        суммы.
+      tags:
+      - partner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateDeliveryRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delivery'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/partner/orders/:
+    get:
+      operationId: partner_orders_retrieve
+      description: Просмотр заказов поставщика
+      tags:
+      - partner
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Partner'
+              examples:
+                OrderResponse:
+                  value:
+                  - id: 0
+                    state: new
+                    dt: '2022-09-23T05:46:37.532422Z'
+                    total_sum: 0
+                    address:
+                      id: 0
+                      city: string
+                      street: string
+                      house: string
+                      structure: string
+                      building: string
+                      apartment: string
+                    ordered_items:
+                    - id: 0
+                      quantity: 0
+                      product_info:
+                        id: 0
+                        external_id: 0
+                        model: string
+                        product:
+                          name: string
+                          category: string
+                        product_parameters:
+                        - parameter: string
+                          value: string
+                        price: 0
+                        price_rrc: 0
+                  summary: order response
+          description: ''
+  /api/v1/partner/register/:
+    post:
+      operationId: partner_register_create
+      description: |-
+        Регистрация поставщика.
+        Отправка почты администратору о регистрации нового поставщика.
+        После регистрации администратору необходимо активировать поставщика
+        для начала работы.
+      tags:
+      - partner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/partner/state/:
+    get:
+      operationId: partner_state_retrieve
+      description: Получение статуса поставщика
+      tags:
+      - partner
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+          description: ''
+    post:
+      operationId: partner_state_create
+      description: Изменение статуса поставщика
+      tags:
+      - partner
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeShopStateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangeShopStateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangeShopStateRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shop'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/partner/update/:
+    post:
+      operationId: partner_update_create
+      description: Загрузка файла или ссылки для обновления прайс-листа
+      tags:
+      - partner
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceInfoUploadRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/products/:
+    get:
+      operationId: products_retrieve
+      description: Класс для поиска товаров
+      tags:
+      - products
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductInfo'
+          description: ''
+  /api/v1/shops/:
+    get:
+      operationId: shops_list
+      description: Класс для просмотра списка магазинов
+      tags:
+      - shops
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shop'
+          description: ''
+  /api/v1/user/addresses/:
+    get:
+      operationId: user_addresses_list
+      description: Получение списка адресов текущего пользователя
+      tags:
+      - user
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+          description: ''
+    post:
+      operationId: user_addresses_create
+      description: Регистрация нового адреса
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+  /api/v1/user/addresses/{id}/:
+    get:
+      operationId: user_addresses_retrieve
+      description: Получение адреса по id (только адреса текущего пользователя)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Адрес пользователя.
+        required: true
+      tags:
+      - user
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    put:
+      operationId: user_addresses_update
+      description: Замена адреса по id (только адреса текущего пользователя)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Адрес пользователя.
+        required: true
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    patch:
+      operationId: user_addresses_partial_update
+      description: Изменение данных адреса по id (только адреса текущего пользователя)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Адрес пользователя.
+        required: true
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAddressRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+          description: ''
+    delete:
+      operationId: user_addresses_destroy
+      description: Удаление адреса по id (только адреса текущего пользователя)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Адрес пользователя.
+        required: true
+      tags:
+      - user
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/user/details/:
+    get:
+      operationId: user_details_retrieve
+      description: Получение данных пользователя.
+      tags:
+      - user
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    post:
+      operationId: user_details_create
+      description: Изменение данных пользователя.
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/user/login/:
+    post:
+      operationId: user_login_create
+      description: Авторизация пользователей
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginStatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/user/password_reset/:
+    post:
+      operationId: user_password_reset_create
+      description: |-
+        An Api View which provides a method to request a password reset token based on an e-mail address
+
+        Sends a signal reset_password_token_created when a reset token was created
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+            examples:
+              PasswordResetRequest:
+                value:
+                  email: some@ema.il
+                summary: password reset request
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+              examples:
+                PasswordResetResponse:
+                  value:
+                    status: OK
+                  summary: password reset response
+          description: ''
+  /api/v1/user/password_reset/confirm/:
+    post:
+      operationId: user_password_reset_confirm_create
+      description: An Api View which provides a method to reset a password based on
+        a unique token
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordTokenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordTokenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordTokenRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordToken'
+              examples:
+                PasswordResetConfirmResponse:
+                  value:
+                    status: OK
+                  summary: password reset confirm response
+          description: ''
+  /api/v1/user/register/:
+    post:
+      operationId: user_register_create
+      description: Регистрация покупателей
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserWithPasswordRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+  /api/v1/user/register/confirm/:
+    post:
+      operationId: user_register_confirm_create
+      description: Подтверждение почтового адреса
+      tags:
+      - user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterConfirmRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterConfirmRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterConfirmRequestRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusTrue'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusFalse'
+          description: ''
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        city:
+          type: string
+          title: Город
+          maxLength: 50
+        street:
+          type: string
+          title: Улица
+          maxLength: 100
+        house:
+          type: string
+          title: Дом
+          maxLength: 15
+        structure:
+          type: string
+          title: Корпус
+          maxLength: 15
+        building:
+          type: string
+          title: Строение
+          maxLength: 15
+        apartment:
+          type: string
+          title: Квартира
+          maxLength: 15
+      required:
+      - city
+      - id
+      - street
+    AddressRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+          writeOnly: true
+          title: Пользователь
+        city:
+          type: string
+          minLength: 1
+          title: Город
+          maxLength: 50
+        street:
+          type: string
+          minLength: 1
+          title: Улица
+          maxLength: 100
+        house:
+          type: string
+          title: Дом
+          maxLength: 15
+        structure:
+          type: string
+          title: Корпус
+          maxLength: 15
+        building:
+          type: string
+          title: Строение
+          maxLength: 15
+        apartment:
+          type: string
+          title: Квартира
+          maxLength: 15
+      required:
+      - city
+      - street
+      - user
+    BasketAddRequestRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+      required:
+      - items
+    BasketAddResponse:
+      type: object
+      properties:
+        Status:
+          type: boolean
+        Создано объектов:
+          type: integer
+      required:
+      - Status
+      - Создано объектов
+    BasketItemUpdateRequestRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        quantity:
+          type: integer
+      required:
+      - id
+      - quantity
+    BasketUpdateRequestRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BasketItemUpdateRequestRequest'
+      required:
+      - items
+    BasketUpdateResponse:
+      type: object
+      properties:
+        Status:
+          type: boolean
+        Обновлено объектов:
+          type: integer
+        Удалено объектов:
+          type: integer
+      required:
+      - Status
+      - Обновлено объектов
+      - Удалено объектов
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название
+          maxLength: 40
+      required:
+      - id
+      - name
+    ChangeShopStateRequest:
+      type: object
+      properties:
+        state:
+          type: boolean
+      required:
+      - state
+    Delivery:
+      type: object
+      properties:
+        min_sum:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: Минимальная сумма
+        cost:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: Стоимоcть доставки
+      required:
+      - cost
+    DeliveryRequest:
+      type: object
+      properties:
+        min_sum:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: Минимальная сумма
+        cost:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+          title: Стоимоcть доставки
+      required:
+      - cost
+    Email:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    EmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    LoginRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    LoginStatusTrue:
+      type: object
+      properties:
+        Status:
+          type: boolean
+        Token:
+          type: string
+      required:
+      - Status
+      - Token
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/StateEnum'
+          title: Статус
+        dt:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата создания
+        total_sum:
+          type: integer
+        address:
+          allOf:
+          - $ref: '#/components/schemas/Address'
+          readOnly: true
+      required:
+      - address
+      - dt
+      - id
+      - state
+      - total_sum
+    OrderFromBasketRequestRequest:
+      type: object
+      properties:
+        address_id:
+          type: integer
+      required:
+      - address_id
+    OrderItemRequest:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Количество
+        product_info:
+          type: integer
+          title: Информация о продукте
+      required:
+      - quantity
+    Partner:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        patronymic:
+          type: string
+          title: Отчество
+          maxLength: 40
+        company:
+          type: string
+          title: Компания
+          maxLength: 40
+        position:
+          type: string
+          title: Должность
+          maxLength: 40
+        phone:
+          type: string
+          title: Телефон
+          maxLength: 20
+        address:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+          readOnly: true
+      required:
+      - address
+      - email
+      - id
+      - phone
+    PasswordToken:
+      type: object
+      properties:
+        password:
+          type: string
+          title: Пароль
+        token:
+          type: string
+      required:
+      - password
+      - token
+    PasswordTokenRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          minLength: 1
+          title: Пароль
+        token:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - token
+    PatchedAddressRequest:
+      type: object
+      properties:
+        user:
+          type: integer
+          writeOnly: true
+          title: Пользователь
+        city:
+          type: string
+          minLength: 1
+          title: Город
+          maxLength: 50
+        street:
+          type: string
+          minLength: 1
+          title: Улица
+          maxLength: 100
+        house:
+          type: string
+          title: Дом
+          maxLength: 15
+        structure:
+          type: string
+          title: Корпус
+          maxLength: 15
+        building:
+          type: string
+          title: Строение
+          maxLength: 15
+        apartment:
+          type: string
+          title: Квартира
+          maxLength: 15
+    PriceInfoUploadRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          minLength: 1
+        file:
+          type: string
+          format: binary
+    Product:
+      type: object
+      properties:
+        name:
+          type: string
+          title: Название
+          maxLength: 80
+        category:
+          type: string
+          readOnly: true
+      required:
+      - category
+      - name
+    ProductInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        external_id:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Внешний ИД
+        model:
+          type: string
+          title: Модель
+          maxLength: 80
+        product:
+          allOf:
+          - $ref: '#/components/schemas/Product'
+          readOnly: true
+        shop:
+          allOf:
+          - $ref: '#/components/schemas/Shop'
+          readOnly: true
+        quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Количество
+        price:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Цена
+        price_rrc:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: Рекомендуемая розничная цена
+        product_parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductParameter'
+          readOnly: true
+      required:
+      - external_id
+      - id
+      - price
+      - price_rrc
+      - product
+      - product_parameters
+      - quantity
+      - shop
+    ProductParameter:
+      type: object
+      properties:
+        parameter:
+          type: string
+          readOnly: true
+        value:
+          type: string
+          title: Значение
+          maxLength: 100
+      required:
+      - parameter
+      - value
+    RegisterConfirmRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - token
+    Shop:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          title: Название
+          maxLength: 50
+        state:
+          type: boolean
+          title: Статус получения заказов
+        delivery:
+          type: array
+          items:
+            $ref: '#/components/schemas/Delivery'
+          readOnly: true
+      required:
+      - delivery
+      - id
+      - name
+    StateEnum:
+      enum:
+      - basket
+      - new
+      - confirmed
+      - assembled
+      - sent
+      - delivered
+      - canceled
+      type: string
+    StatusFalse:
+      type: object
+      properties:
+        Status:
+          type: boolean
+        Errors:
+          type: string
+      required:
+      - Errors
+      - Status
+    StatusTrue:
+      type: object
+      properties:
+        Status:
+          type: boolean
+      required:
+      - Status
+    UpdateDeliveryRequest:
+      type: object
+      properties:
+        delivery:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryRequest'
+      required:
+      - delivery
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        patronymic:
+          type: string
+          title: Отчество
+          maxLength: 40
+        company:
+          type: string
+          title: Компания
+          maxLength: 40
+        position:
+          type: string
+          title: Должность
+          maxLength: 40
+        phone:
+          type: string
+          title: Телефон
+          maxLength: 20
+      required:
+      - email
+      - id
+      - phone
+    UserWithPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          title: Адрес электронной почты
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 150
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 150
+        patronymic:
+          type: string
+          title: Отчество
+          maxLength: 40
+        company:
+          type: string
+          title: Компания
+          maxLength: 40
+        position:
+          type: string
+          title: Должность
+          maxLength: 40
+        phone:
+          type: string
+          minLength: 1
+          title: Телефон
+          maxLength: 20
+      required:
+      - email
+      - password
+      - phone
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

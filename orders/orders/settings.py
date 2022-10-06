@@ -154,6 +154,14 @@ REST_FRAMEWORK = {
     ],
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day'
+    }
 }
 
 # Celery settings
@@ -166,9 +174,13 @@ ADMIN_EMAIL = env('ADMIN_EMAIL')
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Orders API',
     'DESCRIPTION': 'Описание API сервиса заказа товаров',
-    'VERSION': '1.0.0',
+    'VERSION': None,
     'SERVE_INCLUDE_SCHEMA': False,
-    # OTHER SETTINGS
     'SCHEMA_PATH_PREFIX': '/api/v[0-9]',
     'COMPONENT_SPLIT_REQUEST': True,
+    'SWAGGER_UI_SETTINGS': {
+        'persistAuthorization': True,
+        # TODO hide only models of inline_serilializers
+        'defaultModelsExpandDepth': -1,
+    },
 }

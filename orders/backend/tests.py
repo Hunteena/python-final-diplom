@@ -47,7 +47,7 @@ test_data_update_price_info = [
     [None, None, status.HTTP_400_BAD_REQUEST, 'Данные не переданы'],
 ]
 
-
+# TODO use reverse() for paths
 @pytest.mark.django_db
 class TestPartner:
     @pytest.fixture
@@ -107,10 +107,14 @@ class TestPartner:
                     full_path('partner/update/'), {'file': fp},
                     format='multipart'
                 )
+        elif url:
+            response = api_client.post(
+                full_path('partner/update/'), {'url': url},
+                format='multipart'
+            )
         else:
             response = api_client.post(
-                full_path('partner/update/'), {"url": url}
+                full_path('partner/update/'),
             )
 
-        print(response.content)
         assert response.status_code == expected_status, description

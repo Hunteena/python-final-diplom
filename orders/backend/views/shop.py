@@ -99,7 +99,8 @@ class BasketView(APIView):
     @extend_schema(
         request=inline_serializer(
             'BasketAddRequestSerializer',
-            {'items': fields.ListField(child=OrderItemSerializer())}),
+            {'items': fields.ListField(child=OrderItemSerializer())},
+        ),
         responses={
             200: inline_serializer('BasketAddResponseSerializer',
                                    {'Status': fields.BooleanField(),

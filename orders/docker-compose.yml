@@ -3,6 +3,10 @@ version: '3.7'
 networks:
   dev_network:
 
+volumes:
+  pg_data:
+  redis_data:
+
 services:
   db:
     image: postgres:13.4
@@ -12,6 +16,8 @@ services:
       - "5432:5432"
     networks:
       dev_network:
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
   redis:
     image: redis
@@ -20,31 +26,49 @@ services:
       - "6379:6379"
     networks:
       dev_network:
+    volumes:
+      - redis_data:/data
+
+#  requirements:
+#    image: python:3.8
+#    working_dir: /orders
+#    volumes:
+#      - .:/orders
+#    environment:
+#      - PYTHONDONTWRITEBYTECODE=1
+#      - PYTHONUNBUFFERED=1
+#    command: pip install -r requirements.txt
+
+  web:
+    depends_on:
+      - db
+      - redis
+#      - requirements
+#    image: python:3.8
+#    working_dir: /orders
+    volumes:
+      - .:/orders
+    build:
+      context: .
+#    env_file: .env
+    ports:
+      - "8000:8000"
+    command: python manage.py runserver 0.0.0.0:8000
+    networks:
+      dev_network:
 
   worker:
     build:
       context: .
     depends_on:
       - redis
-    user: nobody
-    env_file: .env
+#      - requirements
+#    image: python:3.8
+#    working_dir: /orders
+    volumes:
+      - .:/orders
+#    user: nobody
+#    env_file: .env
     command: celery -A orders.celery_app worker --loglevel=INFO
-    volumes:
-      - .:/orders
-    networks:
-      dev_network:
-
-  web:
-    depends_on:
-      - db
-      - redis
-    build:
-      context: .
-    env_file: .env
-    ports:
-      - "8000:8000"
-    volumes:
-      - .:/orders
-    command: python manage.py runserver 0.0.0.0:8000
     networks:
       dev_network:
