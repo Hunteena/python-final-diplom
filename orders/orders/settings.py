@@ -14,7 +14,6 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import environ
 import os
 
-# TODO check .env.dist
 env = environ.Env(
     # set casting, default value
     DEBUG=(bool, False)

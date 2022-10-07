@@ -277,8 +277,6 @@ class Order(models.Model):
                                 blank=True, null=True,
                                 on_delete=models.CASCADE)
 
-    # buyer = models.OneToOneField
-
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = "Список заказов"
@@ -320,7 +318,6 @@ class Delivery(models.Model):
                              on_delete=models.CASCADE,
     )
     min_sum = models.IntegerField(verbose_name='Минимальная сумма',
-                                  unique=True,
                                   default=0
     )
     cost = models.IntegerField(verbose_name='Стоимоcть доставки')

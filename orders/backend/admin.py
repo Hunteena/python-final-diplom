@@ -1,18 +1,13 @@
 import requests as rqs
 import yaml
 from django.contrib import admin
-# from django.contrib.auth.models import Group
-# from django.contrib.auth.admin import UserAdmin
-# from .models import User
 from django.contrib.admin import helpers
 from django.template.response import TemplateResponse
 from django.urls import path
 
-from .models import (
-    Shop, Category, ProductInfo, ProductParameter,
-    User, ConfirmEmailToken, Address, Order, OrderItem, Delivery, Product,
-    Parameter, STATE_CHOICES
-)
+from .models import (Shop, Category, ProductInfo, ProductParameter, User,
+                     ConfirmEmailToken, Address, Order, OrderItem, Delivery,
+                     STATE_CHOICES)
 from .tasks import send_email_task, do_import_task
 
 
@@ -103,15 +98,10 @@ def make_uptodate(modeladmin, request, queryset):
     context = {
         **modeladmin.admin_site.each_context(request),
         'title': 'Требуется подтверждение',
-        # 'objects_name': str(objects_name),
         'selected': [*queryset],
-        # 'model_count': dict(model_count).items(),
         'queryset': queryset,
-        # 'perms_lacking': perms_needed,
-        # 'protected': protected,
         'opts': modeladmin.model._meta,
         'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
-        # 'media': modeladmin.media,
         'update_href': 'update/?ids=' + ','.join([str(shop.id)
                                                   for shop in queryset])
     }
@@ -191,21 +181,5 @@ class ShopAdmin(admin.ModelAdmin):
                                 context)
 
 
-# class ProductInline(admin.StackedInline):
-#     model = Product
-#     fields = ('id', 'name')
-#     extra = 0
-#     can_delete = False
-#
-#
-# @admin.register(Category)
-# class CategoryAdmin(admin.ModelAdmin):
-#     inlines = [ProductInline, ]
-
-# admin.site.register(Shop)
 admin.site.register(Category)
-# admin.site.register(Product)
-# admin.site.register(Parameter)
-# admin.site.register(ProductParameter)
-# admin.site.register(Address)
 admin.site.register(ConfirmEmailToken)

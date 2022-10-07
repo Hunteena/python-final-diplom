@@ -1,6 +1,9 @@
+import os
+
 import pytest
 from rest_framework.test import APIClient
 from rest_framework import status
+from django.conf import settings
 
 from .models import User
 
@@ -34,9 +37,9 @@ test_data_only_for_shops = [
     ['partner/delivery/', 'get'], ['partner/delivery/', 'post']
 ]
 
-# TODO create temporary file and url
 valid_update_data = {
-    "file": '/home/nina/Projects/python-final-diplom/data/shop1.yaml',
+    "file": os.path.join(os.path.dirname(settings.BASE_DIR),
+                         'data/shop1.yaml'),
     "url": "https://raw.githubusercontent.com/Hunteena/python-final-diplom/master/data/shop1.yaml"
 }
 test_data_update_price_info = [
@@ -47,6 +50,8 @@ test_data_update_price_info = [
     [None, None, status.HTTP_400_BAD_REQUEST, 'Данные не переданы'],
 ]
 
+
+# TODO prevent sending emails during testing
 # TODO use reverse() for paths
 @pytest.mark.django_db
 class TestPartner:

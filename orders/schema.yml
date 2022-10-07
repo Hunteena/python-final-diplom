@@ -702,18 +702,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EmailRequest'
-            examples:
-              PasswordResetRequest:
-                value:
-                  email: some@ema.il
-                summary: password reset request
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EmailRequest'
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EmailRequest'
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
         required: true
       security:
       - tokenAuth: []
@@ -722,12 +717,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Email'
-              examples:
-                PasswordResetResponse:
-                  value:
-                    status: OK
-                  summary: password reset response
+                $ref: '#/components/schemas/StatusTrue'
           description: ''
   /api/v1/user/password_reset/confirm/:
     post:
@@ -755,12 +745,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PasswordToken'
-              examples:
-                PasswordResetConfirmResponse:
-                  value:
-                    status: OK
-                  summary: password reset confirm response
+                $ref: '#/components/schemas/StatusTrue'
           description: ''
   /api/v1/user/register/:
     post:
@@ -1002,23 +987,6 @@ components:
           title: Стоимоcть доставки
       required:
       - cost
-    Email:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required:
-      - email
-    EmailRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          minLength: 1
-      required:
-      - email
     LoginRequestRequest:
       type: object
       properties:
@@ -1134,17 +1102,6 @@ components:
       - email
       - id
       - phone
-    PasswordToken:
-      type: object
-      properties:
-        password:
-          type: string
-          title: Пароль
-        token:
-          type: string
-      required:
-      - password
-      - token
     PasswordTokenRequest:
       type: object
       properties:
@@ -1292,6 +1249,15 @@ components:
       required:
       - email
       - token
+    ResetPasswordRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
     Shop:
       type: object
       properties:

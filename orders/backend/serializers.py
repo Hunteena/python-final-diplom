@@ -1,5 +1,5 @@
 from django.db.models import Sum, F
-from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
+from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -75,16 +75,9 @@ class UserWithPasswordSerializer(serializers.ModelSerializer):
 
 
 @extend_schema_serializer(
-    exclude_fields=['shop'],  # schema ignore these fields
-    # examples=[
-    #     OpenApiExample(
-    #             name='delivery request example', request_only=True,
-    #             value={"delivery": [{"min_sum": 10000, "cost": 0}]},
-    #         ),
-    # ]
+    exclude_fields=['shop'],
 )
 class DeliverySerializer(serializers.ModelSerializer):
-    # TODO check delivery costs
 
     class Meta:
         model = Delivery
@@ -92,7 +85,6 @@ class DeliverySerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'shop': {'write_only': True},
         }
-        # read_only_fields = ['id']
 
 
 class ShopStateSerializer(serializers.ModelSerializer):
@@ -143,11 +135,6 @@ class ProductInfoSerializer(serializers.ModelSerializer):
         fields = ['id', 'external_id', 'model', 'product', 'shop', 'quantity',
                   'price', 'price_rrc', 'product_parameters', ]
         read_only_fields = ['id']
-
-
-# # TODO not used?
-# class OrderItemCreateSerializer(OrderItemSerializer):
-#     product_info = ProductInfoSerializer(read_only=True)
 
 
 class OrderProductInfoSerializer(ProductInfoSerializer):
@@ -208,11 +195,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id',
-                  # 'ordered_items',
-                  'state', 'dt', 'total_sum', 'address'
-                  # 'user'
-                  ]
+        fields = ['id', 'state', 'dt', 'total_sum', 'address']
         read_only_fields = ['id']
 
     def to_representation(self, instance):
@@ -264,18 +247,12 @@ class PartnerOrderSerializer(serializers.ModelSerializer):
 
         self.partner_id = partner_id
 
-    # ordered_items = OrderItemCreateSerializer(read_only=True, many=True)
-
     total_sum = serializers.IntegerField()
     address = AddressSerializer(read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id',
-                  # 'ordered_items',
-                  'state', 'dt', 'total_sum', 'address'
-                  # 'user'
-                  ]
+        fields = ['id', 'state', 'dt', 'total_sum', 'address']
         read_only_fields = ['id']
 
     def to_representation(self, instance):

@@ -1,7 +1,6 @@
+from celery import shared_task
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from celery import shared_task
-import time
 
 from .models import Category, ProductInfo, Product, Parameter, \
     ProductParameter, Shop
@@ -17,7 +16,7 @@ def send_email_task(title, message, addressee_list,
 
 @shared_task()
 def do_import_task(shop_id, data):
-    # TODO select_related?
+    # TODO select_related and prefetch_related?
     shop = Shop.objects.get(id=shop_id)
 
     # TODO clear shop categories?

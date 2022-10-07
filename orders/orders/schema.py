@@ -1,6 +1,7 @@
 from drf_spectacular.extensions import OpenApiViewExtension
-from drf_spectacular.utils import extend_schema, OpenApiExample
-from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, OpenApiExample, \
+    inline_serializer
+from rest_framework import serializers, fields
 
 MY_ORDERS_RESPONSE = OpenApiExample(
     name='order response', response_only=True,
@@ -99,14 +100,11 @@ class Fix(OpenApiViewExtension):
 
     def view_replacement(self):
         class Fixed(self.target_class):
-            @extend_schema(examples=[
-                OpenApiExample(name='password reset request',
-                               request_only=True,
-                               value={'email': 'some@ema.il'}),
-                OpenApiExample(name='password reset response',
-                               response_only=True,
-                               value={"status": "OK"}),
-            ])
+            @extend_schema(
+                request=inline_serializer('ResetPasswordRequestSerializer',
+                                          {'email': fields.EmailField()}),
+                responses={200: StatusTrueSerializer},
+            )
             def post(self, request, *args, **kwargs):
                 ...
 
@@ -118,11 +116,7 @@ class Fix2(OpenApiViewExtension):
 
     def view_replacement(self):
         class Fixed(self.target_class):
-            @extend_schema(examples=[
-                OpenApiExample(name='password reset confirm response',
-                               response_only=True,
-                               value={"status": "OK"}),
-            ])
+            @extend_schema(responses={200: StatusTrueSerializer})
             def post(self, request, *args, **kwargs):
                 ...
 

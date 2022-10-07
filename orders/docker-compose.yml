@@ -10,8 +10,8 @@ volumes:
 services:
   db:
     image: postgres:13.4
-    container_name: ${POSTGRES_HOST}
     env_file: .env
+    container_name: ${POSTGRES_HOST}
     ports:
       - "5432:5432"
     networks:
@@ -21,6 +21,7 @@ services:
 
   redis:
     image: redis
+    env_file: .env
     container_name: ${REDIS_HOST}
     ports:
       - "6379:6379"
@@ -29,28 +30,14 @@ services:
     volumes:
       - redis_data:/data
 
-#  requirements:
-#    image: python:3.8
-#    working_dir: /orders
-#    volumes:
-#      - .:/orders
-#    environment:
-#      - PYTHONDONTWRITEBYTECODE=1
-#      - PYTHONUNBUFFERED=1
-#    command: pip install -r requirements.txt
-
   web:
     depends_on:
       - db
       - redis
-#      - requirements
-#    image: python:3.8
-#    working_dir: /orders
     volumes:
       - .:/orders
     build:
       context: .
-#    env_file: .env
     ports:
       - "8000:8000"
     command: python manage.py runserver 0.0.0.0:8000
@@ -62,13 +49,8 @@ services:
       context: .
     depends_on:
       - redis
-#      - requirements
-#    image: python:3.8
-#    working_dir: /orders
     volumes:
       - .:/orders
-#    user: nobody
-#    env_file: .env
     command: celery -A orders.celery_app worker --loglevel=INFO
     networks:
       dev_network:
