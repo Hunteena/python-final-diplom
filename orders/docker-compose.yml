@@ -40,7 +40,14 @@ services:
       context: .
     ports:
       - "8000:8000"
-    command: python manage.py runserver 0.0.0.0:8000
+    restart: on-failure
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py makemigrations backend --noinput
+        python manage.py migrate
+        python manage.py runserver 0.0.0.0:8000
     networks:
       dev_network:
 

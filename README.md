@@ -22,6 +22,7 @@
 
 - Создать файл _.env_, аналогичный существующему [orders/.env.dist](orders/.env.dist) и в той же директории, и внести в него нужные значения параметров.
 - Перейти в директорию _orders/_, где расположены файлы docker-compose.yml и Dockerfile.
-- `>> docker-compose up`
+- Запустить Docker `>> docker-compose up --build`
 - Сервер доступен по адресу [127.0.0.1:8000/api/v1/]()
 - Документация к проекту на сервере: [Swagger UI](http://127.0.0.1:8000/api/schema/swagger-ui/), [Redoc](http://127.0.0.1:8000/api/schema/redoc/).
+- Создать суперпользователя для доступа к [админстративной панели Django](http://127.0.0.1:8000/admin/) `>> docker-compose exec web python manage.py createsuperuser` 
