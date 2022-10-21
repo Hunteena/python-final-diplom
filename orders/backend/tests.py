@@ -51,7 +51,7 @@ test_data_update_price_info = [
 ]
 
 
-# TODO prevent sending emails during testing
+# TODO prevent sending emails during testing (use an environmental variable)
 # TODO use reverse() for paths
 @pytest.mark.django_db
 class TestPartner:
